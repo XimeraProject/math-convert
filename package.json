@@ -1,0 +1,36 @@
+{
+  "name": "math-convert",
+  "version": "1.0.0",
+  "description": "Parse mathematics from strings and convert among formats",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --watchAll",
+    "build": "rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XimeraProject/math-convert.git"
+  },
+  "keywords": [
+    "math",
+    "convert",
+    "parse",
+    "ast",
+    "latex",
+    "mml",
+    "guppy"
+  ],
+  "author": "Kevin Charles",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/XimeraProject/math-convert/issues"
+  },
+  "homepage": "https://github.com/XimeraProject/math-convert#readme",
+  "devDependencies": {
+    "babel-preset-es2015-node": "^6.1.1",
+    "jest": "^22.4.2",
+    "rollup": "^0.57.1",
+    "rollup-plugin-commonjs": "^9.1.0",
+    "rollup-plugin-node-resolve": "^3.3.0"
+  }
+}
