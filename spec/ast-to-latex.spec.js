@@ -1,4 +1,4 @@
-import { astToLatex } from '../src/ast-to-latex';
+import astToLatex from '../src/ast-to-latex';
 
 var texts = {
 	'1+x+3': '1 + x + 3',
@@ -26,9 +26,9 @@ var texts = {
 
 
 test("log x", () => {
-  expect(astToLatex("log x")).toMatch('\\log\\left(x\\right)');
+  expect(astToLatex(["apply","log","x"])).toMatch('\\log\\left(x\\right)');
 })
 
 // test("log x", () => {
-//   expect(astToLatex("log x")).toMatchSnapshot();
+//   expect(astToLatex(["apply","log","x"])).toMatchSnapshot();
 // })

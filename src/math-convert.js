@@ -1,3 +1,3 @@
-import { astToLatex } from './ast-to-latex';
+import  astToLatex  from './ast-to-latex';
 
 export {astToLatex} ;
