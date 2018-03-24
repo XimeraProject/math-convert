@@ -1,4 +1,6 @@
 import { ParseError } from './error';
+import lexer from './lexer';
+import flatten from './flatten';
 
 /*
  * recursive descent parser for math expressions
@@ -121,525 +123,178 @@ import { ParseError } from './error';
 */
 
 
+var text_rules = [
+  ['[0-9]+(\\.[0-9]+)?(E[+\\-]?[0-9]+)?', 'NUMBER'],
+  ['\\.[0-9]+(E[+\\-]?[0-9]+)?', 'NUMBER'],
+  ['\\*\\*', '^'],
+  ['\\*', '*'], // there is some variety in multiplication symbols
+  ['\\xB7', '*'], // '·'
+  ['\u00B7', '*'], // '·'
+  ['\u2022', '*'], // '•'
+  ['\u22C5', '*'], // '⋅'
+  ['\u00D7', '*'], // '×'
+  ['\/', '/'],
+  ['-', '-'], // there is quite some variety with unicode hyphens
+  ['\u058A', '-'], // '֊'
+  ['\u05BE', '-'], // '־'
+  ['\u1806', '-'], // '᠆'
+  ['\u2010', '-'], // '‐'
+  ['\u2011', '-'], // '‑'
+  ['\u2012', '-'], // '‒'
+  ['\u2013', '-'], // '–'
+  ['\u2014', '-'], // '—'
+  ['\u2015', '-'], // '―'
+  ['\u207B', '-'], // '⁻'
+  ['\u208B', '-'], // '₋'
+  ['\u2212', '-'], // '−'
+  ['\u2E3A', '-'], // '⸺'
+  ['\u2E3B', '-'], // '⸻'
+  ['\uFE58', '-'], // '﹘'
+  ['\uFE63', '-'], // '﹣'
+  ['\uFF0D', '-'], // '－'
+  ['\\+', '+'],
+  ['\\^', '^'], // a few ways to denote exponentiation
+  ['\u2038', '^'], // '‸'
+  ['\u028C', '^'], // 'ʌ'
+  ['\\|', '|'],
+  ['\\(', '('],
+  ['\\)', ')'],
+  ['\\[', '['],
+  ['\\]', ']'],
+  ['\\{', '{'],
+  ['\\}', '}'],
+  [',', ','],
 
+  ['\u03B1', 'VARMULTICHAR', 'alpha'], // 'α'
+  ['\u03B2', 'beta'], // 'β'
+  ['\u03D0', 'VARMULTICHAR', 'beta'], // 'ϐ'
+  ['\u0393', 'VARMULTICHAR', 'Gamma'], // 'Γ'
+  ['\u03B3', 'VARMULTICHAR', 'gamma'], // 'γ'
+  ['\u0394', 'VARMULTICHAR', 'Delta'], // 'Δ'
+  ['\u03B4', 'VARMULTICHAR', 'delta'], // 'δ'
+  ['\u03B5', 'VARMULTICHAR', 'epsilon'], // 'ε' should this be varepsilon?
+  ['\u03F5', 'VARMULTICHAR', 'epsilon'], // 'ϵ'
+  ['\u03B6', 'VARMULTICHAR', 'zeta'], // 'ζ'
+  ['\u03B7', 'VARMULTICHAR', 'eta'], // 'η'
+  ['\u0398', 'VARMULTICHAR', 'Theta'], // 'Θ'
+  ['\u03F4', 'VARMULTICHAR', 'Theta'], // 'ϴ'
+  ['\u03B8', 'VARMULTICHAR', 'theta'], // 'θ'
+  ['\u1DBF', 'VARMULTICHAR', 'theta'], // 'ᶿ'
+  ['\u03D1', 'VARMULTICHAR', 'theta'], // 'ϑ'
+  ['\u03B9', 'VARMULTICHAR', 'iota'], // 'ι'
+  ['\u03BA', 'VARMULTICHAR', 'kappa'], // 'κ'
+  ['\u039B', 'VARMULTICHAR', 'Lambda'], // 'Λ'
+  ['\u03BB', 'VARMULTICHAR', 'lambda'], // 'λ'
+  ['\u03BC', 'VARMULTICHAR', 'mu'], // 'μ'
+  ['\u00B5', 'VARMULTICHAR', 'mu'], // 'µ' should this be micro?
+  ['\u03BD', 'VARMULTICHAR', 'nu'], // 'ν'
+  ['\u039E', 'VARMULTICHAR', 'Xi'], // 'Ξ'
+  ['\u03BE', 'VARMULTICHAR', 'xi'], // 'ξ'
+  ['\u03A0', 'VARMULTICHAR', 'Pi'], // 'Π'
+  ['\u03C0', 'VARMULTICHAR', 'pi'], // 'π'
+  ['\u03D6', 'VARMULTICHAR', 'pi'], // 'ϖ' should this be varpi?
+  ['\u03C1', 'VARMULTICHAR', 'rho'], // 'ρ'
+  ['\u03F1', 'VARMULTICHAR', 'rho'], // 'ϱ' should this be varrho?
+  ['\u03A3', 'VARMULTICHAR', 'Sigma'], // 'Σ'
+  ['\u03C3', 'VARMULTICHAR', 'sigma'], // 'σ'
+  ['\u03C2', 'VARMULTICHAR', 'sigma'], // 'ς' should this be varsigma?
+  ['\u03C4', 'VARMULTICHAR', 'tau'], // 'τ'
+  ['\u03A5', 'VARMULTICHAR', 'Upsilon'], // 'Υ'
+  ['\u03C5', 'VARMULTICHAR', 'upsilon'], // 'υ'
+  ['\u03A6', 'VARMULTICHAR', 'Phi'], // 'Φ'
+  ['\u03C6', 'VARMULTICHAR', 'phi'], // 'φ' should this be varphi?
+  ['\u03D5', 'VARMULTICHAR', 'phi'], // 'ϕ'
+  ['\u03A8', 'VARMULTICHAR', 'Psi'], // 'Ψ'
+  ['\u03C8', 'VARMULTICHAR', 'psi'], // 'ψ'
+  ['\u03A9', 'VARMULTICHAR', 'Omega'], // 'Ω'
+  ['\u03C9', 'VARMULTICHAR', 'omega'], // 'ω'
 
+  ['oo\\b', 'INFINITY'],
+  ['OO\\b', 'INFINITY'],
+  ['infty\\b', 'INFINITY'],
+  ['infinity\\b', 'INFINITY'],
+  ['Infinity\\b', 'INFINITY'],
+  ['\u221E', 'INFINITY'], // '∞'
 
+  ['\u212F', 'VAR', 'e'], // 'ℯ'
 
+  ['\u2660', 'VARMULTICHAR', 'spade'], // '♠'
+  ['\u2661', 'VARMULTICHAR', 'heart'], // '♡'
+  ['\u2662', 'VARMULTICHAR', 'diamond'], // '♢'
+  ['\u2663', 'VARMULTICHAR', 'club'], // '♣'
+  ['\u2605', 'VARMULTICHAR', 'bigstar'], // '★'
+  ['\u25EF', 'VARMULTICHAR', 'bigcirc'], // '◯'
+  ['\u25CA', 'VARMULTICHAR', 'lozenge'], // '◊'
+  ['\u25B3', 'VARMULTICHAR', 'bigtriangleup'], // '△'
+  ['\u25BD', 'VARMULTICHAR', 'bigtriangledown'], // '▽'
+  ['\u29EB', 'VARMULTICHAR', 'blacklozenge'], // '⧫'
+  ['\u25A0', 'VARMULTICHAR', 'blacksquare'], // '■'
+  ['\u25B2', 'VARMULTICHAR', 'blacktriangle'], // '▲'
+  ['\u25BC', 'VARMULTICHAR', 'blacktriangledown'], //'▼'
+  ['\u25C0', 'VARMULTICHAR', 'blacktriangleleft'], // '◀'
+  ['\u25B6', 'VARMULTICHAR', 'blacktriangleright'], // '▶'
+  ['\u25A1', 'VARMULTICHAR', 'Box'], // '□'
+  ['\u2218', 'VARMULTICHAR', 'circ'], // '∘'
+  ['\u22C6', 'VARMULTICHAR', 'star'], // '⋆'
 
+  ['and\\b', 'AND'],
+  ['\\&\\&?', 'AND'],
+  ['\u2227', 'AND'], // '∧'
 
-// var symbol = '';
-// var EOFsymbol = 4
+  ['or\\b', 'OR'],
+  ['\u2228', 'OR'], // '∨'
 
-// function advance() {
-//     symbol = lexer.lex();
-//
-//     if (symbol == 'INVALID') {
-// 	if(yytext() == '_')
-// 	    throw new ParseError("Invalid location of _", yyloc());
-// 	else
-// 	    throw new ParseError("Invalid symbol '" + yytext() + "'",
-// 				 yyloc());
-//     }
-//
-//     return symbol;
-// }
-//
-// function yytext() {
-//     return lexer.yytext;
-// }
-// function yyloc() {
-//     return lexer.yylloc;
-// }
+  ['not\\b', 'NOT'],
+  ['\u00ac', 'NOT'], // '¬'
 
-//
-// /****************************************************************/
-// /* grammar */
-//
-// function statement_list(params) {
-//
-//     var list = [statement(params)];
-//
-//     while(symbol == ",") {
-// 	advance();
-// 	list.push(statement(params));
-//     }
-//
-//     if(list.length > 1)
-// 	list = ['list'].concat(list);
-//     else
-// 	list = list[0];
-//
-//     return list;
-// }
-//
-// function statement(params) {
-//
-//     var lhs=statement2(params);
-//
-//     while (symbol == 'OR') {
-//
-// 	var operation = symbol.toLowerCase();
-//
-// 	advance();
-//
-// 	var rhs = statement2(params);
-//
-// 	lhs = [operation, lhs, rhs];
-//     }
-//
-//     return lhs;
-// }
-//
-// function statement2(params) {
-//     // split AND into second statement to give higher precedence than OR
-//
-//     var lhs=relation(params);
-//
-//     while (symbol == 'AND') {
-//
-// 	var operation = symbol.toLowerCase();
-//
-// 	advance();
-//
-// 	var rhs = relation(params);
-//
-// 	lhs = [operation, lhs, rhs];
-//     }
-//
-//     return lhs;
-// }
-//
-//
-// function relation(params) {
-//
-//     if(symbol == 'NOT' || symbol == '!') {
-// 	advance();
-// 	return ['not', relation(params)];
-//     }
-//
-//     var lhs = expression(params);
-//
-//     while ((symbol == '=') || (symbol == 'NE')
-// 	   || (symbol == '<') || (symbol == '>')
-// 	   || (symbol == 'LE') || (symbol == 'GE')
-// 	   || (symbol == 'IN') || (symbol == 'NOTIN')
-// 	   || (symbol == 'NI') || (symbol == 'NOTNI')
-// 	   || (symbol == 'SUBSET') || (symbol == 'NOTSUBSET')
-// 	   || (symbol == 'SUPERSET') || (symbol == 'NOTSUPERSET')) {
-//
-// 	var operation = symbol.toLowerCase();
-//
-// 	var inequality_sequence=0;
-//
-// 	if((symbol == '<') || (symbol == 'LE')) {
-// 	    inequality_sequence = -1;
-// 	}
-// 	else if((symbol == '>') || (symbol == 'GE')) {
-// 	    inequality_sequence = 1;
-// 	}
-//
-// 	advance();
-// 	var rhs = expression(params);
-//
-// 	if(inequality_sequence == -1) {
-// 	    if((symbol == '<') || symbol == 'LE') {
-// 		// sequence of multiple < or <=
-// 		var strict = ['tuple'];
-// 		if(operation == '<')
-// 		    strict.push(true)
-// 		else
-// 		    strict.push(false)
-//
-// 		var args = ['tuple', lhs, rhs];
-// 		while((symbol == '<') || symbol == 'LE') {
-// 		    if(symbol == '<')
-// 			strict.push(true)
-// 		    else
-// 			strict.push(false)
-//
-// 		    advance();
-// 		    args.push(expression(params));
-// 		}
-// 		lhs = ['lts', args, strict];
-// 	    }
-// 	    else {
-// 		lhs = [operation, lhs, rhs];
-// 	    }
-//
-// 	}
-// 	else if(inequality_sequence == 1) {
-// 	    if((symbol == '>') || symbol == 'GE') {
-// 		// sequence of multiple > or >=
-// 		var strict = ['tuple'];
-// 		if(operation == '>')
-// 		    strict.push(true)
-// 		else
-// 		    strict.push(false)
-//
-// 		var args = ['tuple', lhs, rhs];
-// 		while((symbol == '>') || symbol == 'GE') {
-// 		    if(symbol == '>')
-// 			strict.push(true)
-// 		    else
-// 			strict.push(false)
-//
-// 		    advance();
-// 		    args.push(expression(params));
-// 		}
-// 		lhs = ['gts', args, strict];
-// 	    }
-// 	    else {
-// 		lhs = [operation, lhs, rhs];
-// 	    }
-//
-// 	}
-// 	else if(operation === '=') {
-// 	    lhs = ['=', lhs, rhs];
-//
-// 	    // check for sequence of multiple =
-// 	    while(symbol === '=') {
-// 		advance();
-// 		lhs.push(expression(params));
-// 	    }
-// 	}
-// 	else {
-//
-// 	    lhs = [operation, lhs, rhs];
-// 	}
-//
-//     }
-//
-//     return lhs;
-// }
-//
-//
-// function expression(params) {
-//     if(symbol == '+')
-// 	advance();
-//
-//     var lhs = term(params);
-//     while ((symbol == '+') || (symbol == '-') || (symbol == 'UNION')
-// 	   || (symbol == 'INTERSECT')) {
-//
-// 	var operation = symbol.toLowerCase();
-// 	var negative = false;
-//
-// 	if (symbol == '-') {
-// 	    operation = '+';
-// 	    negative = true;
-// 	    advance();
-// 	}
-// 	else  {
-// 	    advance();
-// 	}
-// 	var rhs = term(params);
-// 	if(negative) {
-// 	    rhs = ['-', rhs];
-// 	}
-//
-// 	lhs = [operation, lhs, rhs];
-//     }
-//
-//     return lhs;
-// }
-//
-//
-// function term(params) {
-//     var lhs = factor(params);
-//
-//     var keepGoing = false;
-//
-//     do {
-// 	keepGoing = false;
-//
-// 	if (symbol == '*') {
-// 	    advance();
-// 	    lhs = ['*', lhs, factor(params)];
-// 	    keepGoing = true;
-// 	} else if (symbol == '/') {
-// 	    advance();
-// 	    lhs = ['/', lhs, factor(params)];
-// 	    keepGoing = true;
-// 	} else {
-// 	    var rhs = nonMinusFactor(params);
-// 	    if (rhs !== false) {
-// 		lhs = ['*', lhs, rhs];
-// 		keepGoing = true;
-// 	    }
-// 	}
-//     } while( keepGoing );
-//
-//     return lhs;
-// }
-//
-//
-// function factor(params) {
-//
-//     if (symbol == '-') {
-// 	advance();
-// 	return ['-', factor(params)];
-//     }
-//
-//     if (symbol == '|') {
-// 	advance();
-//
-// 	var result = statement(params);
-// 	result = ['apply', 'abs', result];
-//
-// 	if (symbol != '|') {
-// 	    throw new ParseError('Expected |', yyloc());
-// 	}
-// 	advance();
-// 	return result;
-//     }
-//
-//     var result = nonMinusFactor(params);
-//
-//     if(result === false) {
-// 	if (symbol == EOFsymbol) {
-// 	    throw new ParseError("Unexpected end of input", yyloc());
-// 	}
-// 	else {
-// 	    throw new ParseError("Invalid location of '" + yytext() + "'",
-// 				 yyloc());
-// 	}
-//     }
-//     else {
-// 	return result;
-//     }
-//
-// }
-//
-// function nonMinusFactor(params) {
-//
-//     var result = baseFactor(params);
-//
-//     // allow arbitrary sequence of factorials
-//     if (symbol == '!' || symbol == "'") {
-// 	if(result === false)
-// 	    throw new ParseError("Invalid location of " + symbol, yyloc());
-// 	while(symbol == '!' || symbol == "'") {
-// 	    if(symbol == '!')
-// 		result = ['apply', 'factorial', result]
-// 	    else
-// 		result = ['prime', result];
-// 	    advance();
-// 	}
-//     }
-//
-//     if (symbol == '^') {
-// 	if(result === false) {
-// 	    throw new ParseError("Invalid location of ^", yyloc());
-// 	}
-// 	advance();
-// 	return ['^', result, factor(params)];
-//     }
-//
-//     return result;
-// }
-//
-//
-// function baseFactor(params) {
-//     var result = false;
-//
-//     if (symbol == 'NUMBER') {
-// 	result = parseFloat( yytext() );
-// 	advance();
-//     } else if (symbol == 'INFINITY') {
-// 	result = 'infinity';
-// 	advance();
-//     } else if (symbol == 'VAR' || symbol == 'VARMULTICHAR') {
-// 	result = yytext();
-//
-// 	if (params.appliedFunctionSymbols.includes(result)
-// 	    || params.functionSymbols.includes(result))  {
-// 	    var must_apply=false
-// 	    if(params.appliedFunctionSymbols.includes(result))
-// 		must_apply = true;
-//
-// 	    result = result.toLowerCase();
-// 	    advance();
-//
-// 	    if(symbol=='_') {
-// 		advance();
-// 		var subresult =  baseFactor(params);
-//
-// 		// since baseFactor could return false, must check
-// 		if(subresult === false) {
-// 		    if (symbol == EOFsymbol) {
-// 			throw new ParseError("Unexpected end of input",
-// 					     yyloc());
-// 		    }
-// 		    else {
-// 			throw new ParseError("Invalid location of '" + yytext()
-// 					     + "'", yyloc()) ;
-// 		    }
-// 		}
-// 		result = ['_', result, subresult];
-// 	    }
-//
-// 	    var n_primes=0;
-// 	    while(symbol == "'") {
-// 		n_primes += 1;
-// 		result = ['prime', result];
-// 		advance();
-// 	    }
-//
-// 	    if(symbol=='^') {
-// 		advance();
-// 		result = ['^', result, factor(params)];
-// 	    }
-//
-// 	    if (symbol == '(') {
-// 		advance();
-// 		var parameters = statement_list(params);
-//
-// 		if (symbol != ')') {
-// 		    throw new ParseError('Expected )', yyloc());
-// 		}
-// 		advance();
-//
-// 		if(parameters[0] == 'list') {
-// 		    // rename from list to tuple
-// 		    parameters[0] = 'tuple';
-// 		}
-//
-// 		result = ['apply', result, parameters];
-// 	    }
-// 	    else {
-// 		// if was an applied function symbol,
-// 		// cannot omit argument
-// 		if(must_apply) {
-// 		    if(!params.allowSimplifiedFunctionApplication)
-// 			throw new ParseError("Expected ( after function",
-// 					     yyloc());
-//
-// 		    // if allow simplied function application
-// 		    // let the argument be the next factor
-// 		    result = ['apply', result, factor(params)];
-// 		}
-// 	    }
-// 	}
-// 	else {
-// 	    // determine if should split text into single letter factors
-// 	    var split = params.splitSymbols;
-//
-// 	    if(split) {
-// 		if(symbol == 'VARMULTICHAR' ||
-// 		   params.unsplitSymbols.includes(result)
-// 		   || result.length == 1) {
-// 		    split = false;
-// 		}
-// 		else if(result.match(/[\d]/g)) {
-// 		    // don't split if has a number in it
-// 		    split = false;
-// 		}
-// 	    }
-//
-// 	    if (split) {
-// 		// so that each character gets processed separately
-// 		// put all characters back on the input
-// 		// but with spaces
-// 		// then process again
-//
-// 		for(var i=result.length-1; i>=0; i--) {
-// 		    lexer.unput(" ");
-// 		    lexer.unput(result[i]);
-// 		}
-// 		advance();
-//
-// 		return baseFactor(params);
-// 	    }
-// 	    else {
-// 		advance();
-// 	    }
-// 	}
-//     } else if (symbol == '(' || symbol == '[' || symbol == '{') {
-// 	var symbol_left = symbol;
-// 	var expected_right, other_right;
-// 	if(symbol == '(') {
-// 	    expected_right = ')';
-// 	    other_right = ']';
-// 	}
-// 	else if(symbol == '[') {
-// 	    expected_right = ']';
-// 	    other_right = ')';
-// 	}
-// 	else {
-// 	    expected_right = '}';
-// 	    other_right = null;
-// 	}
-//
-// 	advance();
-// 	result = statement_list(params);
-//
-// 	var n_elements = 1;
-// 	if(result[0] == "list") {
-// 	    n_elements = result.length-1;
-// 	}
-//
-// 	if (symbol != expected_right) {
-// 	    if(n_elements != 2 || other_right === null) {
-// 		throw new ParseError('Expected ' + expected_right, yyloc());
-// 	    }
-// 	    else if (symbol != other_right) {
-// 		throw new ParseError('Expected ) or ]', yyloc());
-// 	    }
-//
-// 	    // half-open interval
-// 	    result[0] = 'tuple';
-// 	    result = ['interval', result];
-// 	    var closed;
-// 	    if(symbol_left == '(')
-// 		closed = ['tuple', false, true];
-// 	    else
-// 		closed = ['tuple', true, false];
-// 	    result.push(closed);
-//
-// 	}
-// 	else if (n_elements >= 2) {
-// 	    if(symbol_left == '(') {
-// 		result[0]  = 'tuple';
-// 	    }
-// 	    else if(symbol_left == '[') {
-// 		result[0] = 'array';
-// 	    }
-// 	    else {
-// 		result[0] = 'set';
-// 	    }
-// 	}
-// 	else if (symbol_left === '{') {
-// 	    // singleton set
-// 	    result = ['set'].concat(result);
-// 	}
-//
-// 	advance();
-//     }
-//
-//     if (symbol == '_') {
-// 	if(result === false) {
-// 	    throw new ParseError("Invalid location of _", yyloc());
-// 	}
-// 	advance();
-// 	var subresult =  baseFactor(params);
-//
-// 	if(subresult === false) {
-// 	    if (symbol == EOFsymbol) {
-// 		throw new ParseError("Unexpected end of input", yyloc());
-// 	    }
-// 	    else {
-// 		throw new ParseError("Invalid location of '" + yytext() + "'",
-// 				     yyloc());
-// 	    }
-// 	}
-// 	return ['_', result, subresult];
-//     }
-//
-//     return result;
-// }
-//
+  ['=', '='],
+  ['\u1400', '='], // '᐀'
+  ['\u30A0', '='], // '゠'
+  ['!=', 'NE'],
+  ['\u2260', 'NE'], // '≠'
+  ['<=', 'LE'],
+  ['\u2264', 'LE'], // '≤'
+  ['>=', 'GE'],
+  ['\u2265', 'GE'], // '≥'
+  ['<', '<'],
+  ['>', '>'],
 
+  ['elementof\\b', 'IN'],
+  ['\u2208', 'IN'], // '∈'
 
+  ['notelementof\\b', 'NOTIN'],
+  ['\u2209', 'NOTIN'], //'∉' 
+
+  ['containselement\\b', 'NI'],
+  ['\u220B', 'NI'], // '∋'
+
+  ['notcontainselement\\b', 'NOTNI'],
+  ['\u220C', 'NOTNI'], // '∌'
+
+  ['subset\\b', 'SUBSET'],
+  ['\u2282', 'SUBSET'], // '⊂'
+
+  ['notsubset\\b', 'NOTSUBSET'],
+  ['\u2284', 'NOTSUBSET'], // '⊄'
+
+  ['superset\\b', 'SUPERSET'],
+  ['\u2283', 'SUPERSET'], // '⊃'
+
+  ['notsuperset\\b', 'NOTSUPERSET'],
+  ['\u2285', 'NOTSUPERSET'], //'⊅' 
+
+  ['union\\b', 'UNION'],
+  ['\u222A', 'UNION'], // '∪'
+
+  ['intersect\\b', 'INTERSECT'],
+  ['\u2229', 'INTERSECT'], //'∩' 
+
+  ['!', '!'],
+  ['\'', '\''],
+  ['_', '_'],
+  
+  ['[a-zA-Z][a-zA-Z0-9]*', 'VAR']
+];
 
 
 // defaults for parsers if not overridden by context
@@ -678,38 +333,522 @@ class textToAst {
     this.unsplitSymbols = unsplitSymbols;
     this.appliedFunctionSymbols = appliedFunctionSymbols;
     this.functionSymbols = functionSymbols;
-    this.symbolDictionary = {
-    "**": ['^'],
-    "*": ['*'],
-    "\xB7": ['*'],
-    "\u03B1": ['VARMULTICHAR', yytext='alpha'] // 'α'
 
+    this.lexer = new lexer(text_rules);
+    
+  }
+
+  advance() {
+    this.token = this.lexer.advance();
+    if (this.token[0] == 'INVALID') {
+      throw new ParseError("Invalid symbol '" + this.token[1] + "'",
+			   this.lexer.location);
     }
   }
 
-  sanitizeSymbol(symbol){
-    //remove whitespace
-    //return a number
-
-
-  }
-
   convert(input){
-    this.input = input;
-  //   lexer.setInput(input);
-  //   advance();
-  //   var result=statement_list(params)
-  //   if (symbol != EOFsymbol) {
-	// throw new ParseError("Invalid location of '" + yytext() + "'", yyloc());
-  //   }
-  //   return simplify.clean(result);
+    
+    this.lexer.set_input(input);
+    this.advance();
+
+    var result=this.statement_list();
+    
+    if (this.token[0] != 'EOF') {
+      throw new ParseError("Invalid location of '" + this.token[1] + "'",
+			   this.lexer.location);
+    }
+
+    return flatten(result);
 
   }
 
+
+  statement_list() {
+
+    var list = [this.statement()];
+
+    while(this.token[0] == ",") {
+      this.advance();
+      list.push(this.statement());
+    }
+    
+    if(list.length > 1)
+      list = ['list'].concat(list);
+    else
+      list = list[0];
+
+    return list;
+  }
+
+  statement() {
+
+    var lhs=this.statement2();
+
+    while (this.token[0] == 'OR') {
+
+      var operation = this.token[0].toLowerCase();
+      
+      this.advance();
+
+      var rhs = this.statement2();
+
+      lhs = [operation, lhs, rhs];
+    }
+
+    return lhs;
+  }
+
+  statement2() {
+    // split AND into second statement to give higher precedence than OR
+
+    var lhs=this.relation();
+
+    while (this.token[0] == 'AND') {
+
+      var operation = this.token[0].toLowerCase();
+
+      this.advance();
+
+      var rhs = this.relation();
+
+      lhs = [operation, lhs, rhs];
+    }
+
+    return lhs;
+  }
+
+
+  relation() {
+
+    if(this.token[0] == 'NOT' || this.token[0] == '!') {
+      this.advance();
+      return ['not', this.relation()];
+    }
+
+    var lhs = this.expression();
+
+    while ((this.token[0] == '=') || (this.token[0] == 'NE')
+	   || (this.token[0] == '<') || (this.token[0] == '>')
+	   || (this.token[0] == 'LE') || (this.token[0] == 'GE')
+	   || (this.token[0] == 'IN') || (this.token[0] == 'NOTIN')
+	   || (this.token[0] == 'NI') || (this.token[0] == 'NOTNI')
+	   || (this.token[0] == 'SUBSET') || (this.token[0] == 'NOTSUBSET')
+	   || (this.token[0] == 'SUPERSET') || (this.token[0] == 'NOTSUPERSET')) {
+
+      var operation = this.token[0].toLowerCase();
+
+      var inequality_sequence=0;
+
+      if((this.token[0] == '<') || (this.token[0] == 'LE')) {
+	inequality_sequence = -1;
+      }
+      else if((this.token[0] == '>') || (this.token[0] == 'GE')) {
+	inequality_sequence = 1;
+      }
+
+      this.advance();
+      var rhs = this.expression();
+
+      if(inequality_sequence == -1) {
+	if((this.token[0] == '<') || this.token[0] == 'LE') {
+	  // sequence of multiple < or <=
+	  var strict = ['tuple'];
+	  if(operation == '<')
+	    strict.push(true)
+	  else
+	    strict.push(false)
+
+	  var args = ['tuple', lhs, rhs];
+	  while((this.token[0] == '<') || this.token[0] == 'LE') {
+	    if(this.token[0] == '<')
+	      strict.push(true)
+	    else
+	      strict.push(false)
+
+	    this.advance();
+	    args.push(this.expression());
+	  }
+	  lhs = ['lts', args, strict];
+	}
+	else {
+	  lhs = [operation, lhs, rhs];
+	}
+
+      }
+      else if(inequality_sequence == 1) {
+	if((this.token[0] == '>') || this.token[0] == 'GE') {
+	  // sequence of multiple > or >=
+	  var strict = ['tuple'];
+	  if(operation == '>')
+	    strict.push(true)
+	  else
+	    strict.push(false)
+
+	  var args = ['tuple', lhs, rhs];
+	  while((this.token[0] == '>') || this.token[0] == 'GE') {
+	    if(this.token[0] == '>')
+	      strict.push(true)
+	    else
+	      strict.push(false)
+
+	    this.advance();
+	    args.push(this.expression());
+	  }
+	  lhs = ['gts', args, strict];
+	}
+	else {
+	  lhs = [operation, lhs, rhs];
+	}
+
+      }
+      else if(operation === '=') {
+	lhs = ['=', lhs, rhs];
+
+	// check for sequence of multiple =
+	while(this.token[0] === '=') {
+	  this.advance();
+	  lhs.push(this.expression());
+	}
+      }
+      else {
+
+	lhs = [operation, lhs, rhs];
+      }
+
+    }
+
+    return lhs;
+  }
+
+
+  expression() {
+    if(this.token[0] == '+')
+      this.advance();
+
+    var lhs = this.term();
+    while ((this.token[0] == '+') || (this.token[0] == '-') || (this.token[0] == 'UNION')
+	   || (this.token[0] == 'INTERSECT')) {
+
+      var operation = this.token[0].toLowerCase();
+      var negative = false;
+
+      if (this.token[0] == '-') {
+	operation = '+';
+	negative = true;
+	this.advance();
+      }
+      else  {
+	this.advance();
+      }
+      var rhs = this.term();
+      if(negative) {
+	rhs = ['-', rhs];
+      }
+
+      lhs = [operation, lhs, rhs];
+    }
+
+    return lhs;
+  }
+
+
+  term() {
+    var lhs = this.factor();
+
+    var keepGoing = false;
+
+    do {
+      keepGoing = false;
+
+      if (this.token[0] == '*') {
+	this.advance();
+	lhs = ['*', lhs, this.factor()];
+	keepGoing = true;
+      } else if (this.token[0] == '/') {
+	this.advance();
+	lhs = ['/', lhs, this.factor()];
+	keepGoing = true;
+      } else {
+	var rhs = this.nonMinusFactor();
+	if (rhs !== false) {
+	  lhs = ['*', lhs, rhs];
+	  keepGoing = true;
+	}
+      }
+    } while( keepGoing );
+
+    return lhs;
+  }
+
+
+  factor() {
+
+    if (this.token[0] == '-') {
+      this.advance();
+      return ['-', this.factor()];
+    }
+
+    if (this.token[0] == '|') {
+      this.advance();
+
+      var result = this.statement();
+      result = ['apply', 'abs', result];
+
+      if (this.token[0] != '|') {
+	throw new ParseError('Expected |', this.lexer.location);
+      }
+      this.advance();
+      return result;
+    }
+
+    var result = this.nonMinusFactor();
+
+    if(result === false) {
+      if (this.token[0] == "EOF") {
+	throw new ParseError("Unexpected end of input", this.lexer.location);
+      }
+      else {
+	throw new ParseError("Invalid location of '" + this.token[1] + "'",
+			     this.lexer.location);
+      }
+    }
+    else {
+      return result;
+    }
+
+  }
+
+  nonMinusFactor() {
+
+    var result = this.baseFactor();
+
+    // allow arbitrary sequence of factorials
+    if (this.token[0] == '!' || this.token[0] == "'") {
+      if(result === false)
+	throw new ParseError("Invalid location of " + this.token[0],
+			     this.lexer.location);
+      while(this.token[0] == '!' || this.token[0] == "'") {
+	if(this.token[0] == '!')
+	  result = ['apply', 'factorial', result]
+	else
+	  result = ['prime', result];
+	this.advance();
+      }
+    }
+
+    if (this.token[0] == '^') {
+      if(result === false) {
+	throw new ParseError("Invalid location of ^", this.lexer.location);
+      }
+      this.advance();
+      return ['^', result, this.factor()];
+    }
+
+    return result;
+  }
+
+
+  baseFactor() {
+    var result = false;
+
+    if (this.token[0] == 'NUMBER') {
+      result = parseFloat( this.token[1] );
+      this.advance();
+    } else if (this.token[0] == 'INFINITY') {
+      result = 'infinity';
+      this.advance();
+    } else if (this.token[0] == 'VAR' || this.token[0] == 'VARMULTICHAR') {
+      result = this.token[1];
+
+      if (this.appliedFunctionSymbols.includes(result)
+	  || this.functionSymbols.includes(result))  {
+	var must_apply=false
+	if(this.appliedFunctionSymbols.includes(result))
+	  must_apply = true;
+
+	result = result.toLowerCase();
+	this.advance();
+
+	if(this.token[0]=='_') {
+	  this.advance();
+	  var subresult =  this.baseFactor();
+
+	  // since baseFactor could return false, must check
+	  if(subresult === false) {
+	    if (this.token[0] == "EOF") {
+	      throw new ParseError("Unexpected end of input",
+				   this.lexer.location);
+	    }
+	    else {
+	      throw new ParseError("Invalid location of '" + this.token[1]
+				   + "'", this.lexer.location) ;
+	    }
+	  }
+	  result = ['_', result, subresult];
+	}
+
+	var n_primes=0;
+	while(this.token[0] == "'") {
+	  n_primes += 1;
+	  result = ['prime', result];
+	  this.advance();
+	}
+
+	if(this.token[0]=='^') {
+	  this.advance();
+	  result = ['^', result, this.factor()];
+	}
+
+	if (this.token[0] == '(') {
+	  this.advance();
+	  var parameters = this.statement_list();
+
+	  if (this.token[0] != ')') {
+	    throw new ParseError('Expected )', this.lexer.location);
+	  }
+	  this.advance();
+
+	  if(parameters[0] == 'list') {
+	    // rename from list to tuple
+	    parameters[0] = 'tuple';
+	  }
+
+	  result = ['apply', result, parameters];
+	}
+	else {
+	  // if was an applied function symbol,
+	  // cannot omit argument
+	  if(must_apply) {
+	    if(!this.allowSimplifiedFunctionApplication)
+	      throw new ParseError("Expected ( after function",
+				   this.lexer.location);
+
+	    // if allow simplied function application
+	    // let the argument be the next factor
+	    result = ['apply', result, this.factor()];
+	  }
+	}
+      }
+      else {
+	// determine if should split text into single letter factors
+	var split = this.splitSymbols;
+
+	if(split) {
+	  if(this.token[0] == 'VARMULTICHAR' ||
+	     this.unsplitSymbols.includes(result)
+	     || result.length == 1) {
+	    split = false;
+	  }
+	  else if(result.match(/[\d]/g)) {
+	    // don't split if has a number in it
+	    split = false;
+	  }
+	}
+
+	if (split) {
+	  // so that each character gets processed separately
+	  // put all characters back on the input
+	  // but with spaces
+	  // then process again
+
+	  for(var i=result.length-1; i>=0; i--) {
+	    this.lexer.unput(" ");
+	    this.lexer.unput(result[i]);
+	  }
+	  this.advance();
+
+	  return this.baseFactor();
+	}
+	else {
+	  this.advance();
+	}
+      }
+    } else if (this.token[0] == '(' || this.token[0] == '['
+	       || this.token[0] == '{') {
+      var token_left = this.token[0];
+      var expected_right, other_right;
+      if(this.token[0] == '(') {
+	expected_right = ')';
+	other_right = ']';
+      }
+      else if(this.token[0] == '[') {
+	expected_right = ']';
+	other_right = ')';
+      }
+      else {
+	expected_right = '}';
+	other_right = null;
+      }
+
+      this.advance();
+      result = this.statement_list();
+
+      var n_elements = 1;
+      if(result[0] == "list") {
+	n_elements = result.length-1;
+      }
+
+      if (this.token[0] != expected_right) {
+	if(n_elements != 2 || other_right === null) {
+	  throw new ParseError('Expected ' + expected_right,
+			       this.lexer.location);
+	}
+	else if (this.token[0] != other_right) {
+	  throw new ParseError('Expected ) or ]', this.lexer.location);
+	}
+
+	// half-open interval
+	result[0] = 'tuple';
+	result = ['interval', result];
+	var closed;
+	if(token_left == '(')
+	  closed = ['tuple', false, true];
+	else
+	  closed = ['tuple', true, false];
+	result.push(closed);
+
+      }
+      else if (n_elements >= 2) {
+	if(token_left == '(') {
+	  result[0]  = 'tuple';
+	}
+	else if(token_left == '[') {
+	  result[0] = 'array';
+	}
+	else {
+	  result[0] = 'set';
+	}
+      }
+      else if (token_left === '{') {
+	// singleton set
+	result = ['set'].concat(result);
+      }
+
+      this.advance();
+    }
+
+    if (this.token[0] == '_') {
+      if(result === false) {
+	throw new ParseError("Invalid location of _", this.lexer.location);
+      }
+      this.advance();
+      var subresult =  this.baseFactor();
+
+      if(subresult === false) {
+	if (this.token[0] == "EOF") {
+	  throw new ParseError("Unexpected end of input", this.lexer.location);
+	}
+	else {
+	  throw new ParseError("Invalid location of '" + this.token[1] + "'",
+			       this.lexer.location);
+	}
+      }
+      return ['_', result, subresult];
+    }
+
+    return result;
+  }
 
 }
-
-var obj = new textToAst();
-console.log(obj.convert('1+x+3'));
 
 export default textToAst;
