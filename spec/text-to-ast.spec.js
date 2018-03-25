@@ -1,17 +1,7 @@
 import textToAst from '../src/text-to-ast';
-import _ from 'underscore';
+import { ParseError } from '../src/error';
 
-
-test("1 + x + 3", () => {
-  expect(textToAst('1+x+3')).toMatch(['+',1,'x',3]);
-})
-
-// var astToText = require('../lib/converters/parser').ast.to.text;
-// var textToAst = require('../lib/converters/parser').text.to.ast;
-// var _ = require('underscore');
-// var ParseError = require('../lib/error').ParseError;
-// var Context = require('../lib/math-expressions');
-//
+var converter = new textToAst();
 
 var trees = {
   '1+x+3': ['+',1,'x',3],
@@ -170,43 +160,127 @@ var trees = {
   '+oo': 'infinity',
 };
 
-_.each( _.keys(trees), function(string) {
+Object.keys(trees).forEach(function(string) {
   test("parses " + string, () => {
-    expect(textToAst(string)).toMatch(trees[string]);
+    expect(converter.convert(string)).toEqual(trees[string]);
   });
 
 });
-//
-//
-//     // inputs that should throw an error
-//     var bad_inputs = {
-// 	'1++1': "Invalid location of '+'",
-// 	')1++1': "Invalid location of ')'",
-// 	'(1+1': "Expected )",
-// 	'x-y-': "Unexpected end of input",
-// 	'|x| |y|': "Invalid location of '|'",
-// 	'_x': "Invalid location of _",
-// 	'x_': "Unexpected end of input",
-// 	'x@2': "Invalid symbol '@'",
-// 	'|y/v': "Expected |",
-// 	'x+^2': "Invalid location of ^",
-// 	'x/\'y': "Invalid location of '",
-// 	'[1,2,3)': "Expected ]",
-// 	'(1,2,3]': "Expected )",
-// 	'[x)': "Expected ]",
-// 	'(x]': "Expected )",
-// 	'sin': "Unexpected end of input",
-// 	'sin+cos': "Invalid location of '+'",
-// 	'\\cos(x)': "Invalid symbol '\\'",
-//     }
-//
-//     _.each( _.keys(bad_inputs), function(string) {
-// 	it("throws " + string, function() {
-// 	    expect(function() {textToAst(string)}).toThrowError(ParseError, bad_inputs[string]);
-// 	});
-//     });
-//
-//
+
+
+// inputs that should throw an error
+var bad_inputs = {
+  '1++1': "Invalid location of '+'",
+  ')1++1': "Invalid location of ')'",
+  '(1+1': "Expected )",
+  'x-y-': "Unexpected end of input",
+  '|x| |y|': "Invalid location of '|'",
+  '_x': "Invalid location of _",
+  'x_': "Unexpected end of input",
+  'x@2': "Invalid symbol '@'",
+  '|y/v': "Expected |",
+  'x+^2': "Invalid location of ^",
+  'x/\'y': "Invalid location of '",
+  '[1,2,3)': "Expected ]",
+  '(1,2,3]': "Expected )",
+  '[x)': "Expected ]",
+  '(x]': "Expected )",
+  'sin': "Unexpected end of input",
+  'sin+cos': "Invalid location of '+'",
+  '\\cos(x)': "Invalid symbol '\\'",
+}
+
+Object.keys(bad_inputs).forEach(function(string) {
+  test("throws " + string, function() {
+    expect(() => {converter.convert(string)}).toThrow(bad_inputs[string]);
+  });
+});
+
+
+
+test("split symbols", function () {
+  
+  let converter_default = new textToAst();
+  let converter_split = new textToAst({splitSymbols: true});
+  let converter_nosplit = new textToAst({splitSymbols: false});
+  
+  expect(converter_default.convert('xzy')).toEqual(['*', 'x', 'z', 'y']);
+  expect(converter_split.convert('xzy')).toEqual(['*', 'x', 'z', 'y']);
+  expect(converter_nosplit.convert('xzy')).toEqual('xzy');
+
+});
+
+test("unsplit symbols", function () {
+
+  let converter = new textToAst({unsplitSymbols: []});
+  expect(converter.convert('3pi')).toEqual(['*', 3, 'p', 'i']);
+
+  converter = new textToAst({unsplitSymbols: ['pi']});
+  expect(converter.convert('3pi')).toEqual(['*', 3, 'pi']);
+
+});
+
+test("function symbols", function () {
+
+  let converter = new textToAst({functionSymbols: []});
+  expect(converter.convert('f(x)+h(y)')).toEqual(
+    ['+',['*', 'f', 'x'], ['*', 'h', 'y']]);
+  
+  converter = new textToAst({functionSymbols: ['f']});
+  expect(converter.convert('f(x)+h(y)')).toEqual(
+    ['+',['apply', 'f', 'x'], ['*', 'h', 'y']]);
+
+  converter = new textToAst({functionSymbols: ['f', 'h']});
+  expect(converter.convert('f(x)+h(y)')).toEqual(
+    ['+',['apply', 'f', 'x'], ['apply', 'h', 'y']]);
+
+  converter = new textToAst({functionSymbols: ['f', 'h', 'x']});
+  expect(converter.convert('f(x)+h(y)')).toEqual(
+    ['+',['apply', 'f', 'x'], ['apply', 'h', 'y']]);
+
+});
+
+test("applied function symbols", function () {
+
+  let converter = new textToAst({appliedFunctionSymbols: []});
+  expect(converter.convert('sin(x) + custom(y)')).toEqual(
+    ['+', ['*', 's', 'i', 'n', 'x'], ['*', 'c', 'u', 's', 't', 'o', 'm', 'y']]);
+  expect(converter.convert('sin x  + custom y')).toEqual(
+    ['+', ['*', 's', 'i', 'n', 'x'], ['*', 'c', 'u', 's', 't', 'o', 'm', 'y']]);
+
+  converter = new textToAst({appliedFunctionSymbols: ['custom']});
+  expect(converter.convert('sin(x) + custom(y)')).toEqual(
+    ['+', ['*', 's', 'i', 'n', 'x'], ['apply', 'custom', 'y']]);
+  expect(converter.convert('sin x  + custom y')).toEqual(
+    ['+', ['*', 's', 'i', 'n', 'x'], ['apply', 'custom', 'y']]);
+
+  converter = new textToAst({appliedFunctionSymbols: ['custom', 'sin']});
+  expect(converter.convert('sin(x) + custom(y)')).toEqual(
+    ['+', ['apply', 'sin', 'x'], ['apply', 'custom', 'y']]);
+  expect(converter.convert('sin x  + custom y')).toEqual(
+    ['+', ['apply', 'sin', 'x'], ['apply', 'custom', 'y']]);
+
+});
+
+it("allow simplified function application", function () {
+  let converter = new textToAst();
+  expect(converter.convert('sin x')).toEqual(
+    ['apply', 'sin', 'x']);
+
+  converter = new textToAst({allowSimplifiedFunctionApplication: false});
+  expect(() => {converter.convert('sin x')}).toThrow(
+    "Expected ( after function");
+
+  converter = new textToAst({allowSimplifiedFunctionApplication: true});
+  expect(converter.convert('sin x')).toEqual(
+    ['apply', 'sin', 'x']);
+
+});
+
+
+// Tests that involve both astToText and textToAst
+
+
 //     // Inputs that are strings should render as exactly the same string
 //     // (other than white space changes) after one round trip to ast.
 //     // For inputs that are arrays, the first component should render to
@@ -389,216 +463,3 @@ _.each( _.keys(trees), function(string) {
 // 		expect(astToText(textToAst(astToText(textToAst(input))))).toEqual(astToText(textToAst(input)));
 // 	});
 //     });
-//
-//     it("split symbols", function () {
-//
-// 	Context.set_to_default();
-// 	expect(Context.fromText('xzy').tree).toEqual(['*', 'x', 'z', 'y']);
-//
-// 	Context.parser_parameters.splitSymbols = false;
-// 	expect(Context.fromText('xzy').tree).toEqual('xzy');
-//
-// 	Context.parser_parameters.splitSymbols = "false";
-// 	expect(Context.fromText('xzy').tree).toEqual('xzy');
-//
-// 	Context.parser_parameters.splitSymbols = "False";
-// 	expect(Context.fromText('xzy').tree).toEqual('xzy');
-//
-// 	Context.parser_parameters.splitSymbols = "FALSE";
-// 	expect(Context.fromText('xzy').tree).toEqual('xzy');
-//
-// 	Context.parser_parameters.splitSymbols = true;
-// 	expect(Context.fromText('xzy').tree).toEqual(['*', 'x', 'z', 'y']);
-//
-// 	Context.parser_parameters.splitSymbols = "true";
-// 	expect(Context.fromText('xzy').tree).toEqual(['*', 'x', 'z', 'y']);
-//
-// 	Context.parser_parameters.splitSymbols = "True";
-// 	expect(Context.fromText('xzy').tree).toEqual(['*', 'x', 'z', 'y']);
-//
-// 	Context.parser_parameters.splitSymbols = "TRUE";
-// 	expect(Context.fromText('xzy').tree).toEqual(['*', 'x', 'z', 'y']);
-//
-// 	Context.set_to_default();
-// 	let params={};
-//
-// 	expect(Context.fromText('xzy', params).tree).toEqual(['*', 'x', 'z', 'y']);
-//
-// 	Context.parser_parameters.splitSymbols = false;
-// 	expect(Context.fromText('xzy', params).tree).toEqual('xzy');
-//
-// 	params.splitSymbols = true;
-// 	expect(Context.fromText('xzy', params).tree).toEqual(['*', 'x', 'z', 'y']);
-//
-// 	params.splitSymbols = false;
-// 	expect(Context.fromText('xzy', params).tree).toEqual('xzy');
-//
-// 	Context.parser_parameters.splitSymbols = true;
-// 	expect(Context.fromText('xzy', params).tree).toEqual('xzy');
-//
-// 	Context.set_to_default();
-//
-//     });
-//
-//     it("unsplit symbols", function () {
-// 	Context.set_to_default();
-//
-// 	Context.parser_parameters.unsplitSymbols =  [];
-// 	expect(Context.fromText('3pi').tree).toEqual(['*', 3, 'p', 'i']);
-//
-// 	Context.parser_parameters.unsplitSymbols.push('pi');
-// 	expect(Context.fromText('3pi').tree).toEqual(['*', 3, 'pi']);
-//
-// 	Context.set_to_default();
-//
-// 	let params = {};
-// 	expect(Context.fromText('3pi', params).tree).toEqual(['*', 3, 'pi']);
-//
-// 	Context.parser_parameters.unsplitSymbols =  [];
-// 	expect(Context.fromText('3pi', params).tree).toEqual(['*', 3, 'p', 'i']);
-//
-// 	Context.set_to_default();
-//
-// 	params.unsplitSymbols = [];
-// 	expect(Context.fromText('3pi', params).tree).toEqual(['*', 3, 'p', 'i']);
-//
-// 	params.unsplitSymbols.push('pi');
-// 	expect(Context.fromText('3pi', params).tree).toEqual(['*', 3, 'pi']);
-//
-// 	Context.parser_parameters.unsplitSymbols =  [];
-// 	expect(Context.fromText('3pi', params).tree).toEqual(['*', 3, 'pi']);
-//
-// 	Context.set_to_default();
-//     });
-//
-//     it("function symbols", function () {
-// 	Context.set_to_default();
-//
-// 	Context.parser_parameters.functionSymbols = [];
-// 	expect(Context.fromText('f(x)+h(y)').tree).toEqual(
-// 	    ['+',['*', 'f', 'x'], ['*', 'h', 'y']]);
-//
-// 	Context.parser_parameters.functionSymbols.push('f');
-// 	expect(Context.fromText('f(x)+h(y)').tree).toEqual(
-// 	    ['+',['apply', 'f', 'x'], ['*', 'h', 'y']]);
-//
-// 	Context.parser_parameters.functionSymbols.push('h');
-// 	expect(Context.fromText('f(x)+h(y)').tree).toEqual(
-// 	    ['+',['apply', 'f', 'x'], ['apply', 'h', 'y']]);
-//
-// 	Context.parser_parameters.functionSymbols.push('x');
-// 	expect(Context.fromText('f(x)+h(y)').tree).toEqual(
-// 	    ['+',['apply', 'f', 'x'], ['apply', 'h', 'y']]);
-//
-// 	Context.set_to_default();
-//
-// 	let params = {};
-//
-// 	params.functionSymbols = [];
-// 	expect(Context.fromText('f(x)+h(y)', params).tree).toEqual(
-// 	    ['+',['*', 'f', 'x'], ['*', 'h', 'y']]);
-//
-// 	Context.parser_parameters.functionSymbols = [];
-// 	Context.parser_parameters.functionSymbols.push('f');
-// 	expect(Context.fromText('f(x)+h(y)', params).tree).toEqual(
-// 	    ['+',['*', 'f', 'x'], ['*', 'h', 'y']]);
-//
-// 	params.functionSymbols.push('f');
-// 	expect(Context.fromText('f(x)+h(y)', params).tree).toEqual(
-// 	    ['+',['apply', 'f', 'x'], ['*', 'h', 'y']]);
-//
-// 	Context.set_to_default();
-//
-// 	expect(Context.fromText('f(x)+h(y)', params).tree).toEqual(
-// 	    ['+',['apply', 'f', 'x'], ['*', 'h', 'y']]);
-//
-// 	params.functionSymbols.push('h');
-// 	expect(Context.fromText('f(x)+h(y)', params).tree).toEqual(
-// 	    ['+',['apply', 'f', 'x'], ['apply', 'h', 'y']]);
-//
-// 	params.functionSymbols.push('x');
-// 	expect(Context.fromText('f(x)+h(y)', params).tree).toEqual(
-// 	    ['+',['apply', 'f', 'x'], ['apply', 'h', 'y']]);
-//
-// 	Context.set_to_default();
-//     });
-//
-//     it("applied function symbols", function () {
-// 	Context.set_to_default();
-//
-// 	Context.parser_parameters.appliedFunctionSymbols = [];
-// 	expect(Context.fromText('sin(x) + custom(y)').tree).toEqual(
-// 	    ['+', ['*', 's', 'i', 'n', 'x'], ['*', 'c', 'u', 's', 't', 'o', 'm', 'y']]);
-// 	expect(Context.fromText('sin x + custom y').tree).toEqual(
-// 	    ['+', ['*', 's', 'i', 'n', 'x'], ['*', 'c', 'u', 's', 't', 'o', 'm', 'y']]);
-//
-// 	Context.parser_parameters.appliedFunctionSymbols.push('custom');
-// 	expect(Context.fromText('sin(x) + custom(y)').tree).toEqual(
-// 	    ['+', ['*', 's', 'i', 'n', 'x'], ['apply', 'custom', 'y']]);
-// 	expect(Context.fromText('sin x + custom y').tree).toEqual(
-// 	    ['+', ['*', 's', 'i', 'n', 'x'], ['apply', 'custom', 'y']]);
-//
-// 	Context.parser_parameters.appliedFunctionSymbols.push('sin');
-// 	expect(Context.fromText('sin(x) + custom(y)').tree).toEqual(
-// 	    ['+', ['apply', 'sin', 'x'], ['apply', 'custom', 'y']]);
-// 	expect(Context.fromText('sin x + custom y').tree).toEqual(
-// 	    ['+', ['apply', 'sin', 'x'], ['apply', 'custom', 'y']]);
-//
-// 	Context.set_to_default();
-//
-// 	let params={};
-//
-// 	params.appliedFunctionSymbols = [];
-// 	expect(Context.fromText('sin(x) + custom(y)', params).tree).toEqual(
-// 	    ['+', ['*', 's', 'i', 'n', 'x'], ['*', 'c', 'u', 's', 't', 'o', 'm', 'y']]);
-// 	expect(Context.fromText('sin x + custom y', params).tree).toEqual(
-// 	    ['+', ['*', 's', 'i', 'n', 'x'], ['*', 'c', 'u', 's', 't', 'o', 'm', 'y']]);
-//
-// 	params.appliedFunctionSymbols.push('custom');
-// 	expect(Context.fromText('sin(x) + custom(y)', params).tree).toEqual(
-// 	    ['+', ['*', 's', 'i', 'n', 'x'], ['apply', 'custom', 'y']]);
-// 	expect(Context.fromText('sin x + custom y', params).tree).toEqual(
-// 	    ['+', ['*', 's', 'i', 'n', 'x'], ['apply', 'custom', 'y']]);
-//
-// 	params.appliedFunctionSymbols.push('sin');
-// 	expect(Context.fromText('sin(x) + custom(y)', params).tree).toEqual(
-// 	    ['+', ['apply', 'sin', 'x'], ['apply', 'custom', 'y']]);
-// 	expect(Context.fromText('sin x + custom y', params).tree).toEqual(
-// 	    ['+', ['apply', 'sin', 'x'], ['apply', 'custom', 'y']]);
-//
-// 	Context.set_to_default();
-//
-//     });
-//
-//     it("allow simplified function application", function () {
-// 	Context.set_to_default();
-//
-// 	expect(Context.fromText('sin x').tree).toEqual(
-// 	    ['apply', 'sin', 'x']);
-//
-// 	Context.parser_parameters.allowSimplifiedFunctionApplication = false;
-// 	expect(function() {Context.fromText('sin x')}).toThrowError(
-// 	    ParseError, "Expected ( after function");
-//
-// 	Context.parser_parameters.allowSimplifiedFunctionApplication = true;
-// 	expect(Context.fromText('sin x').tree).toEqual(
-// 	    ['apply', 'sin', 'x']);
-//
-//     	Context.set_to_default();
-// 	let params={};
-//
-// 	expect(Context.fromText('sin x', params).tree).toEqual(
-// 	    ['apply', 'sin', 'x']);
-//
-// 	params.allowSimplifiedFunctionApplication = false;
-// 	expect(function() {Context.fromText('sin x', params)}).toThrowError(
-// 	    ParseError, "Expected ( after function");
-//
-// 	params.allowSimplifiedFunctionApplication = true;
-// 	expect(Context.fromText('sin x', params).tree).toEqual(
-// 	    ['apply', 'sin', 'x']);
-//
-//     	Context.set_to_default();
-//
-//     });
-// });

@@ -72,7 +72,7 @@ class lexer {
 
     // case that didn't find any matches
     if(result === null) {
-      return ['INVALID'];
+      return ['INVALID', this.input[0]];
     }
 
     // found a match, set token
