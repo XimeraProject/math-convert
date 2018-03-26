@@ -1,22 +1,22 @@
 /*
  * convert syntax trees back to LaTeX code
  *
- * Copyright 2014-2017 by 
+ * Copyright 2014-2017 by
  *  Jim Fowler <kisonecat@gmail.com>
  *  Duane Nykamp <nykamp@umn.edu>
  *
  * This file is part of a math-expressions library
- * 
+ *
  * math-expressions is free software: you can redistribute
  * it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either
  * version 3 of the License, or at your option any later version.
- * 
+ *
  * math-expressions is distributed in the hope that it
  * will be useful, but WITHOUT ANY WARRANTY; without even the implied
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  */
 
 "use strict";
@@ -69,7 +69,7 @@ function statement(tree) {
 
     if((!(operator in operators)) && operator!=="apply")
 	throw new Error("Badly formed ast: operator " + operator + " not recognized.");
-    
+
     if (operator === 'and' || operator === 'or')  {
 	return operators[operator]( operands.map( function(v,i) {
 	    var result = single_statement(v);
@@ -146,19 +146,19 @@ function single_statement(tree) {
 	}
 	return result;
     }
-    
+
     return expression(tree);
 }
 
 
 function expression(tree) {
     if ((typeof tree === 'string') || (typeof tree === 'number')) {
-	return term(tree);	
+	return term(tree);
     }
-    
+
     var operator = tree[0];
     var operands = tree.slice(1);
-    
+
     if (operator == '+') {
 	return operators[operator]( operands.map( function(v,i) {
 	    if(i>0)
@@ -167,7 +167,7 @@ function expression(tree) {
 		return term(v);
 	} ));
     }
-    
+
     if ((operator == 'union') || (operator == 'intersect')) {
 	return operators[operator]( operands.map( function(v,i) {
 	    return term(v);
@@ -179,9 +179,9 @@ function expression(tree) {
 
 function term(tree) {
     if ((typeof tree === 'string') || (typeof tree === 'number')) {
-	return factor(tree);	
+	return factor(tree);
     }
-    
+
     var operator = tree[0];
     var operands = tree.slice(1);
 
@@ -204,12 +204,12 @@ function term(tree) {
 		return factor(v);
 	}));
     }
-    
+
     if (operator == '/') {
 	return operators[operator]( operands.map( function(v,i) { return expression(v); } ) );
     }
-    
-    return factor(tree);	
+
+    return factor(tree);
 }
 
 function simple_factor_or_function_or_parens(tree) {
@@ -240,15 +240,15 @@ function factor(tree) {
 	if (tree.length > 1) return "\\" + tree;
 	return tree;
     }
-    
+
     if (typeof tree === 'number') {
 	return tree;
     }
-    
+
     var operator = tree[0];
     var operands = tree.slice(1);
 
-    
+
     if (operator === "^") {
 	var operand0 = factor(operands[0]);
 
@@ -259,19 +259,19 @@ function factor(tree) {
 	while(remove_primes[0] == 'prime') {
 	    remove_primes=remove_primes[1];
 	}
-	
+
 	if(!(simple_factor_or_function_or_parens(remove_primes) ||
 	     (remove_primes[0] == '_' &&  (typeof remove_primes[1] == 'string'))
 	    ))
 	    operand0 = '\\left(' + operand0.toString() + '\\right)';
-	
+
 	return operand0 + '^{' + statement(operands[1]) + '}';
     }
     else if (operator === "_") {
 	var operand0 = factor(operands[0]);
 	if(!(simple_factor_or_function_or_parens(operands[0])))
 	    operand0 = '\\left(' + operand0.toString() + '\\right)';
-	
+
 	return operand0 + '_{' + statement(operands[1]) + '}';
     }
     else if(operator === "prime") {
@@ -284,7 +284,7 @@ function factor(tree) {
 	}
 
 	var result = factor(op);
-	
+
 	if (!(simple_factor_or_function_or_parens(op) ||
 	      (op[0] == '_' &&  (typeof op[1] == 'string'))
 	     ))
@@ -305,7 +305,7 @@ function factor(tree) {
 	return operators[operator]( operands.map( function(v,i) {
 	    return statement(v);
 	}));
-	
+
     }
     else if(operator === 'interval') {
 
@@ -321,7 +321,7 @@ function factor(tree) {
 	    result = '\\left[ ' + result;
 	else
 	    result = '\\left( ' + result;
-	
+
 	if(closed[2])
 	    result = result + ' \\right]';
 	else
@@ -349,7 +349,7 @@ function factor(tree) {
 	if(operands[0] == 'sqrt') {
 	    return '\\sqrt{' + statement(operands[1]) + '}';
 	}
-	
+
 	var f = factor(operands[0]);
 	var f_args = statement(operands[1]);
 
@@ -389,4 +389,4 @@ function astToLatex(tree) {
     return statement(tree);
 }
 
-export { astToLatex };
+export default astToLatex ;
