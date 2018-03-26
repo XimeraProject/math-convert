@@ -3,24 +3,24 @@ import lexer from './lexer';
 import flatten from './flatten';
 
 /*
- * recursive descent parser for math expressions 
+ * recursive descent parser for math expressions
  *
- * Copyright 2014-2017 by 
+ * Copyright 2014-2017 by
  *  Jim Fowler <kisonecat@gmail.com>
  *  Duane Nykamp <nykamp@umn.edu>
  *
  * This file is part of a math-expressions library
- * 
+ *
  * math-expressions is free software: you can redistribute
  * it and/or modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation, either
  * version 3 of the License, or at your option any later version.
- * 
+ *
  * math-expressions is distributed in the hope that it
  * will be useful, but WITHOUT ANY WARRANTY; without even the implied
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  */
 
 /* Grammar:
@@ -127,9 +127,9 @@ import flatten from './flatten';
 */
 
 
-var whitespace_rule = '(\\s|\\\\,|\\\\!|\\\\ |\\\\>|\\\\;|\\\\:|\\\\quad\\b|\\\\qquad\\b)+';
+const whitespace_rule = '(\\s|\\\\,|\\\\!|\\\\ |\\\\>|\\\\;|\\\\:|\\\\quad\\b|\\\\qquad\\b)+';
 
-var latex_rules = [
+const latex_rules = [
   ['[0-9]+(\\.[0-9]+)?(E[+\\-]?[0-9]+)?', 'NUMBER'],
   ['\\.[0-9]+(E[+\\-]?[0-9]+)?', 'NUMBER'],
   ['\\*', '*'],
@@ -206,15 +206,15 @@ var latex_rules = [
   ['\\\\acos\\b', 'LATEXCOMMAND', '\\arccos'],
   ['\\\\atan\\b', 'LATEXCOMMAND', '\\arctan'],
   ['\\\\sqrt\\b', 'SQRT'],
-  
+
   ['\\\\land\\b', 'AND'],
   ['\\\\wedge\\b', 'AND'],
-  
+
   ['\\\\lor\\b', 'OR'],
   ['\\\\vee\\b', 'OR'],
-  
+
   ['\\\\lnot\\b', 'NOT'],
-  
+
   ['=', '='],
   ['\\\\neq\\b', 'NE'],
   ['\\\\ne\\b', 'NE'],
@@ -227,7 +227,7 @@ var latex_rules = [
   ['\\\\lt\\b', '<'],
   ['>', '>'],
   ['\\\\gt\\b', '>'],
-  
+
   ['\\\\in\\b', 'IN'],
 
   ['\\\\notin\\b', 'NOTIN'],
@@ -242,9 +242,9 @@ var latex_rules = [
   ['\\\\not\\s*\\\\subset\\b', 'NOTSUBSET'],
 
   ['\\\\supset\\b', 'SUPERSET'],
-  
+
   ['\\\\not\\s*\\\\supset\\b', 'NOTSUPERSET'],
-  
+
   ['\\\\cup\\b', 'UNION'],
 
   ['\\\\cap\\b', 'INTERSECT'],
@@ -285,7 +285,7 @@ class latexToAst {
     this.functionSymbols = functionSymbols;
 
     this.lexer = new lexer(latex_rules, whitespace_rule);
-    
+
   }
 
   advance() {
@@ -297,12 +297,12 @@ class latexToAst {
   }
 
   convert(input){
-    
+
     this.lexer.set_input(input);
     this.advance();
 
     var result=this.statement_list();
-    
+
     if (this.token[0] != 'EOF') {
       throw new ParseError("Invalid location of '" + this.token[1] + "'",
 			   this.lexer.location);
@@ -313,14 +313,14 @@ class latexToAst {
   }
 
   statement_list() {
-    
+
     var list = [this.statement()];
 
     while(this.token[0] == ",") {
       this.advance();
       list.push(this.statement());
     }
-    
+
     if(list.length > 1)
       list = ['list'].concat(list);
     else
@@ -349,7 +349,7 @@ class latexToAst {
 
   statement2() {
     // split AND into second statement to give higher precedence than OR
-    
+
     var lhs=this.relation();
 
     while (this.token[0] == 'AND') {
@@ -366,7 +366,7 @@ class latexToAst {
     return lhs;
   }
 
-  
+
   relation() {
 
     if(this.token[0] == 'NOT' || this.token[0] == '!') {
@@ -387,14 +387,14 @@ class latexToAst {
       var operation = this.token[0].toLowerCase();
 
       var inequality_sequence=0;
-      
+
       if((this.token[0] == '<') || (this.token[0] == 'LE')) {
 	inequality_sequence = -1;
       }
       else if((this.token[0] == '>') || (this.token[0] == 'GE')) {
 	inequality_sequence = 1;
       }
-      
+
       this.advance();
       var rhs = this.expression();
 
@@ -422,7 +422,7 @@ class latexToAst {
 	else {
 	  lhs = [operation, lhs, rhs];
 	}
-	
+
       }
       else if(inequality_sequence == 1) {
 	if((this.token[0] == '>') || this.token[0] == 'GE') {
@@ -473,12 +473,12 @@ class latexToAst {
   expression() {
     if(this.token[0] == '+')
       this.advance();
-    
+
     var lhs = this.term();
     while ((this.token[0] == '+') || (this.token[0] == '-')
 	   || (this.token[0] == 'UNION')
 	   || (this.token[0] == 'INTERSECT')) {
-      
+
       var operation = this.token[0].toLowerCase();
       var negative = false;
 
@@ -497,7 +497,7 @@ class latexToAst {
 
       lhs = [operation, lhs, rhs];
     }
-    
+
     return lhs;
   }
 
@@ -506,10 +506,10 @@ class latexToAst {
     var lhs = this.factor();
 
     var keepGoing = false;
-    
+
     do {
       keepGoing = false;
-      
+
       if (this.token[0] == '*') {
 	this.advance();
 	lhs = ['*', lhs, this.factor()];
@@ -526,7 +526,7 @@ class latexToAst {
 	}
       }
     } while( keepGoing );
-    
+
     return lhs;
   }
 
@@ -539,10 +539,10 @@ class latexToAst {
 
     if (this.token[0] == '|') {
       this.advance();
-      
+
       var result = this.statement();
       result = ['apply', 'abs', result];
-      
+
       if (this.token[0] != '|') {
 	throw new ParseError('Expected |', this.lexer.location);
       }
@@ -564,13 +564,13 @@ class latexToAst {
     else {
       return result;
     }
-    
+
   }
 
   nonMinusFactor() {
-    
+
     var result = this.baseFactor();
-    
+
     // allow arbitrary sequence of factorials
     if (this.token[0] == '!' || this.token[0] == "'") {
       if(result === false)
@@ -599,34 +599,34 @@ class latexToAst {
 
   baseFactor() {
     var result = false;
-    
+
     if (this.token[0] == 'FRAC') {
       this.advance();
-      
+
       if (this.token[0] != '{') {
 	throw new ParseError("Expected {", this.lexer.location);
       }
       this.advance();
-      
+
       var numerator = this.statement();
-      
+
       if (this.token[0] != '}') {
 	throw new ParseError("Expected }", this.lexer.location);
       }
       this.advance();
-      
+
       if (this.token[0] != '{') {
 	throw new ParseError("Expected {", this.lexer.location);
       }
       this.advance();
-      
+
       var denominator = this.statement();
-      
+
       if (this.token[0] != '}') {
 	throw new ParseError("Expected }", this.lexer.location);
       }
       this.advance();
-      
+
       return ['/', numerator, denominator];
     }
 
@@ -647,14 +647,14 @@ class latexToAst {
 	  throw new ParseError("Expected ]", this.lexer.location);
 	}
 	this.advance();
-	
+
 	root = parameter;
       }
 
       if (this.token[0] != '{') {
 	throw new ParseError("Expected {", this.lexer.location);
       }
-      
+
       this.advance();
       var parameter = this.statement();
       if (this.token[0] != '}') {
@@ -677,7 +677,7 @@ class latexToAst {
 	var must_apply=false
 	if(this.appliedFunctionSymbols.includes(result))
 	  must_apply = true;
-	
+
 	result = result.toLowerCase();
 	this.advance();
 
@@ -710,14 +710,14 @@ class latexToAst {
 	  this.advance();
 	  result = ['^', result, this.factor()];
 	}
-	
+
 	if (this.token[0] == '{' || this.token[0] == '(') {
 	  var expected_right;
 	  if(this.token[0] == '{')
 	    expected_right = '}';
 	  else
 	    expected_right = ')';
-	  
+
 	  this.advance();
 	  var parameters = this.statement_list();
 
@@ -731,7 +731,7 @@ class latexToAst {
 	    // rename from list to tuple
 	    parameters[0] = 'tuple';
 	  }
-	  
+
 	  result = ['apply', result, parameters];
 
 	}
@@ -773,15 +773,15 @@ class latexToAst {
 	expected_right = 'RBRACE';
 	other_right = null;
       }
-      
+
       this.advance();
       result = this.statement_list();
-      
+
       var n_elements = 1;
       if(result[0] == "list") {
 	n_elements = result.length-1;
       }
-      
+
       if (this.token[0] != expected_right) {
 	if(n_elements != 2 || other_right === null) {
 	  throw new ParseError('Expected ' + expected_right,
@@ -800,7 +800,7 @@ class latexToAst {
 	else
 	  closed = ['tuple', true, false];
 	result.push(closed);
-	
+
       }
       else if (n_elements >= 2) {
 	if(token_left == '(' || token_left == '{') {
@@ -817,10 +817,10 @@ class latexToAst {
 	// singleton set
 	result = ['set'].concat(result);
       }
-      
+
       this.advance();
     }
-    
+
     if (this.token[0] == '_') {
       if(result === false) {
 	throw new ParseError("Invalid location of _", this.lexer.location);

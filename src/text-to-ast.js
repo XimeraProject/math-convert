@@ -1,4 +1,4 @@
-import { ParseError } from './error';
+import {ParseError} from './error';
 import lexer from './lexer';
 import flatten from './flatten';
 
@@ -123,7 +123,7 @@ import flatten from './flatten';
 */
 
 
-var text_rules = [
+const text_rules = [
   ['[0-9]+(\\.[0-9]+)?(E[+\\-]?[0-9]+)?', 'NUMBER'],
   ['\\.[0-9]+(E[+\\-]?[0-9]+)?', 'NUMBER'],
   ['\\*\\*', '^'],
@@ -263,7 +263,7 @@ var text_rules = [
   ['\u2208', 'IN'], // '∈'
 
   ['notelementof\\b', 'NOTIN'],
-  ['\u2209', 'NOTIN'], //'∉' 
+  ['\u2209', 'NOTIN'], //'∉'
 
   ['containselement\\b', 'NI'],
   ['\u220B', 'NI'], // '∋'
@@ -281,18 +281,18 @@ var text_rules = [
   ['\u2283', 'SUPERSET'], // '⊃'
 
   ['notsuperset\\b', 'NOTSUPERSET'],
-  ['\u2285', 'NOTSUPERSET'], //'⊅' 
+  ['\u2285', 'NOTSUPERSET'], //'⊅'
 
   ['union\\b', 'UNION'],
   ['\u222A', 'UNION'], // '∪'
 
   ['intersect\\b', 'INTERSECT'],
-  ['\u2229', 'INTERSECT'], //'∩' 
+  ['\u2229', 'INTERSECT'], //'∩'
 
   ['!', '!'],
   ['\'', '\''],
   ['_', '_'],
-  
+
   ['[a-zA-Z][a-zA-Z0-9]*', 'VAR']
 ];
 
@@ -311,7 +311,7 @@ const unsplitSymbolsDefault = ['pi', 'theta', 'theta', 'Theta', 'alpha', 'nu', '
 
 // Applied functions must be given an argument so that
 // they are applied to the argument
-const appliedFunctionSymbolsDefault = [ "abs", "exp", "log", "ln", "log10", "sign", "sqrt", "erf", "acos", "acosh", "acot", "acoth", "acsc", "acsch", "asec", "asech", "asin", "asinh", "atan", "atanh", "cos", "cosh", "cot", "coth", "csc", "csch", "sec", "sech", "sin", "sinh", "tan", "tanh", 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot', 'cosec', 'arg'];
+const appliedFunctionSymbolsDefault = ["abs", "exp", "log", "ln", "log10", "sign", "sqrt", "erf", "acos", "acosh", "acot", "acoth", "acsc", "acsch", "asec", "asech", "asin", "asinh", "atan", "atanh", "cos", "cosh", "cot", "coth", "csc", "csch", "sec", "sech", "sin", "sinh", "tan", "tanh", 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot', 'cosec', 'arg'];
 
 // Functions could have an argument, in which case they are applied
 // or, if they don't have an argument in parentheses, then they are treated
@@ -322,12 +322,12 @@ const functionSymbolsDefault = ['f', 'g'];
 
 class textToAst {
   constructor({
-    allowSimplifiedFunctionApplication=allowSimplifiedFunctionApplicationDefault,
-    splitSymbols=splitSymbolsDefault,
-    unsplitSymbols=unsplitSymbolsDefault,
-    appliedFunctionSymbols=appliedFunctionSymbolsDefault,
-    functionSymbols=functionSymbolsDefault
-  } = {}){
+    allowSimplifiedFunctionApplication = allowSimplifiedFunctionApplicationDefault,
+    splitSymbols = splitSymbolsDefault,
+    unsplitSymbols = unsplitSymbolsDefault,
+    appliedFunctionSymbols = appliedFunctionSymbolsDefault,
+    functionSymbols = functionSymbolsDefault
+  } = {}) {
     this.allowSimplifiedFunctionApplication = allowSimplifiedFunctionApplication;
     this.splitSymbols = splitSymbols;
     this.unsplitSymbols = unsplitSymbols;
@@ -335,27 +335,27 @@ class textToAst {
     this.functionSymbols = functionSymbols;
 
     this.lexer = new lexer(text_rules);
-    
+
   }
 
   advance() {
     this.token = this.lexer.advance();
     if (this.token[0] == 'INVALID') {
       throw new ParseError("Invalid symbol '" + this.token[1] + "'",
-			   this.lexer.location);
+        this.lexer.location);
     }
   }
 
-  convert(input){
-    
+  convert(input) {
+
     this.lexer.set_input(input);
     this.advance();
 
-    var result=this.statement_list();
-    
+    var result = this.statement_list();
+
     if (this.token[0] != 'EOF') {
       throw new ParseError("Invalid location of '" + this.token[1] + "'",
-			   this.lexer.location);
+        this.lexer.location);
     }
 
     return flatten(result);
@@ -367,12 +367,12 @@ class textToAst {
 
     var list = [this.statement()];
 
-    while(this.token[0] == ",") {
+    while (this.token[0] == ",") {
       this.advance();
       list.push(this.statement());
     }
-    
-    if(list.length > 1)
+
+    if (list.length > 1)
       list = ['list'].concat(list);
     else
       list = list[0];
@@ -382,12 +382,12 @@ class textToAst {
 
   statement() {
 
-    var lhs=this.statement2();
+    var lhs = this.statement2();
 
     while (this.token[0] == 'OR') {
 
       var operation = this.token[0].toLowerCase();
-      
+
       this.advance();
 
       var rhs = this.statement2();
@@ -401,7 +401,7 @@ class textToAst {
   statement2() {
     // split AND into second statement to give higher precedence than OR
 
-    var lhs=this.relation();
+    var lhs = this.relation();
 
     while (this.token[0] == 'AND') {
 
@@ -420,99 +420,93 @@ class textToAst {
 
   relation() {
 
-    if(this.token[0] == 'NOT' || this.token[0] == '!') {
+    if (this.token[0] == 'NOT' || this.token[0] == '!') {
       this.advance();
       return ['not', this.relation()];
     }
 
     var lhs = this.expression();
 
-    while ((this.token[0] == '=') || (this.token[0] == 'NE')
-	   || (this.token[0] == '<') || (this.token[0] == '>')
-	   || (this.token[0] == 'LE') || (this.token[0] == 'GE')
-	   || (this.token[0] == 'IN') || (this.token[0] == 'NOTIN')
-	   || (this.token[0] == 'NI') || (this.token[0] == 'NOTNI')
-	   || (this.token[0] == 'SUBSET') || (this.token[0] == 'NOTSUBSET')
-	   || (this.token[0] == 'SUPERSET') || (this.token[0] == 'NOTSUPERSET')) {
+    while ((this.token[0] == '=') || (this.token[0] == 'NE') ||
+      (this.token[0] == '<') || (this.token[0] == '>') ||
+      (this.token[0] == 'LE') || (this.token[0] == 'GE') ||
+      (this.token[0] == 'IN') || (this.token[0] == 'NOTIN') ||
+      (this.token[0] == 'NI') || (this.token[0] == 'NOTNI') ||
+      (this.token[0] == 'SUBSET') || (this.token[0] == 'NOTSUBSET') ||
+      (this.token[0] == 'SUPERSET') || (this.token[0] == 'NOTSUPERSET')) {
 
       var operation = this.token[0].toLowerCase();
 
-      var inequality_sequence=0;
+      var inequality_sequence = 0;
 
-      if((this.token[0] == '<') || (this.token[0] == 'LE')) {
-	inequality_sequence = -1;
-      }
-      else if((this.token[0] == '>') || (this.token[0] == 'GE')) {
-	inequality_sequence = 1;
+      if ((this.token[0] == '<') || (this.token[0] == 'LE')) {
+        inequality_sequence = -1;
+      } else if ((this.token[0] == '>') || (this.token[0] == 'GE')) {
+        inequality_sequence = 1;
       }
 
       this.advance();
       var rhs = this.expression();
 
-      if(inequality_sequence == -1) {
-	if((this.token[0] == '<') || this.token[0] == 'LE') {
-	  // sequence of multiple < or <=
-	  var strict = ['tuple'];
-	  if(operation == '<')
-	    strict.push(true)
-	  else
-	    strict.push(false)
+      if (inequality_sequence == -1) {
+        if ((this.token[0] == '<') || this.token[0] == 'LE') {
+          // sequence of multiple < or <=
+          var strict = ['tuple'];
+          if (operation == '<')
+            strict.push(true)
+          else
+            strict.push(false)
 
-	  var args = ['tuple', lhs, rhs];
-	  while((this.token[0] == '<') || this.token[0] == 'LE') {
-	    if(this.token[0] == '<')
-	      strict.push(true)
-	    else
-	      strict.push(false)
+          var args = ['tuple', lhs, rhs];
+          while ((this.token[0] == '<') || this.token[0] == 'LE') {
+            if (this.token[0] == '<')
+              strict.push(true)
+            else
+              strict.push(false)
 
-	    this.advance();
-	    args.push(this.expression());
-	  }
-	  lhs = ['lts', args, strict];
-	}
-	else {
-	  lhs = [operation, lhs, rhs];
-	}
+            this.advance();
+            args.push(this.expression());
+          }
+          lhs = ['lts', args, strict];
+        } else {
+          lhs = [operation, lhs, rhs];
+        }
 
-      }
-      else if(inequality_sequence == 1) {
-	if((this.token[0] == '>') || this.token[0] == 'GE') {
-	  // sequence of multiple > or >=
-	  var strict = ['tuple'];
-	  if(operation == '>')
-	    strict.push(true)
-	  else
-	    strict.push(false)
+      } else if (inequality_sequence == 1) {
+        if ((this.token[0] == '>') || this.token[0] == 'GE') {
+          // sequence of multiple > or >=
+          var strict = ['tuple'];
+          if (operation == '>')
+            strict.push(true)
+          else
+            strict.push(false)
 
-	  var args = ['tuple', lhs, rhs];
-	  while((this.token[0] == '>') || this.token[0] == 'GE') {
-	    if(this.token[0] == '>')
-	      strict.push(true)
-	    else
-	      strict.push(false)
+          var args = ['tuple', lhs, rhs];
+          while ((this.token[0] == '>') || this.token[0] == 'GE') {
+            if (this.token[0] == '>')
+              strict.push(true)
+            else
+              strict.push(false)
 
-	    this.advance();
-	    args.push(this.expression());
-	  }
-	  lhs = ['gts', args, strict];
-	}
-	else {
-	  lhs = [operation, lhs, rhs];
-	}
+            this.advance();
+            args.push(this.expression());
+          }
+          lhs = ['gts', args, strict];
+        } else {
+          lhs = [operation, lhs, rhs];
+        }
 
-      }
-      else if(operation === '=') {
-	lhs = ['=', lhs, rhs];
+      } else if (operation === '=') {
+        lhs = ['=', lhs, rhs];
 
-	// check for sequence of multiple =
-	while(this.token[0] === '=') {
-	  this.advance();
-	  lhs.push(this.expression());
-	}
-      }
-      else {
+        // check for sequence of multiple =
+        while (this.token[0] === '=') {
+          this.advance();
+          lhs.push(this.expression());
+        }
+      } else {
 
-	lhs = [operation, lhs, rhs];
+        lhs = [operation, lhs, rhs];
       }
 
     }
@@ -522,27 +516,26 @@ class textToAst {
 
 
   expression() {
-    if(this.token[0] == '+')
+    if (this.token[0] == '+')
       this.advance();
 
     var lhs = this.term();
-    while ((this.token[0] == '+') || (this.token[0] == '-') || (this.token[0] == 'UNION')
-	   || (this.token[0] == 'INTERSECT')) {
+    while ((this.token[0] == '+') || (this.token[0] == '-') || (this.token[0] == 'UNION') ||
+      (this.token[0] == 'INTERSECT')) {
 
       var operation = this.token[0].toLowerCase();
       var negative = false;
 
       if (this.token[0] == '-') {
-	operation = '+';
-	negative = true;
-	this.advance();
-      }
-      else  {
-	this.advance();
+        operation = '+';
+        negative = true;
+        this.advance();
+      } else {
+        this.advance();
       }
       var rhs = this.term();
-      if(negative) {
-	rhs = ['-', rhs];
+      if (negative) {
+        rhs = ['-', rhs];
       }
 
       lhs = [operation, lhs, rhs];
@@ -561,21 +554,21 @@ class textToAst {
       keepGoing = false;
 
       if (this.token[0] == '*') {
-	this.advance();
-	lhs = ['*', lhs, this.factor()];
-	keepGoing = true;
+        this.advance();
+        lhs = ['*', lhs, this.factor()];
+        keepGoing = true;
       } else if (this.token[0] == '/') {
-	this.advance();
-	lhs = ['/', lhs, this.factor()];
-	keepGoing = true;
+        this.advance();
+        lhs = ['/', lhs, this.factor()];
+        keepGoing = true;
       } else {
-	var rhs = this.nonMinusFactor();
-	if (rhs !== false) {
-	  lhs = ['*', lhs, rhs];
-	  keepGoing = true;
-	}
+        var rhs = this.nonMinusFactor();
+        if (rhs !== false) {
+          lhs = ['*', lhs, rhs];
+          keepGoing = true;
+        }
       }
-    } while( keepGoing );
+    } while (keepGoing);
 
     return lhs;
   }
@@ -595,7 +588,7 @@ class textToAst {
       result = ['apply', 'abs', result];
 
       if (this.token[0] != '|') {
-	throw new ParseError('Expected |', this.lexer.location);
+        throw new ParseError('Expected |', this.lexer.location);
       }
       this.advance();
       return result;
@@ -603,16 +596,14 @@ class textToAst {
 
     var result = this.nonMinusFactor();
 
-    if(result === false) {
+    if (result === false) {
       if (this.token[0] == "EOF") {
-	throw new ParseError("Unexpected end of input", this.lexer.location);
+        throw new ParseError("Unexpected end of input", this.lexer.location);
+      } else {
+        throw new ParseError("Invalid location of '" + this.token[1] + "'",
+          this.lexer.location);
       }
-      else {
-	throw new ParseError("Invalid location of '" + this.token[1] + "'",
-			     this.lexer.location);
-      }
-    }
-    else {
+    } else {
       return result;
     }
 
@@ -624,21 +615,21 @@ class textToAst {
 
     // allow arbitrary sequence of factorials
     if (this.token[0] == '!' || this.token[0] == "'") {
-      if(result === false)
-	throw new ParseError("Invalid location of " + this.token[0],
-			     this.lexer.location);
-      while(this.token[0] == '!' || this.token[0] == "'") {
-	if(this.token[0] == '!')
-	  result = ['apply', 'factorial', result]
-	else
-	  result = ['prime', result];
-	this.advance();
+      if (result === false)
+        throw new ParseError("Invalid location of " + this.token[0],
+          this.lexer.location);
+      while (this.token[0] == '!' || this.token[0] == "'") {
+        if (this.token[0] == '!')
+          result = ['apply', 'factorial', result]
+        else
+          result = ['prime', result];
+        this.advance();
       }
     }
 
     if (this.token[0] == '^') {
-      if(result === false) {
-	throw new ParseError("Invalid location of ^", this.lexer.location);
+      if (result === false) {
+        throw new ParseError("Invalid location of ^", this.lexer.location);
       }
       this.advance();
       return ['^', result, this.factor()];
@@ -652,7 +643,7 @@ class textToAst {
     var result = false;
 
     if (this.token[0] == 'NUMBER') {
-      result = parseFloat( this.token[1] );
+      result = parseFloat(this.token[1]);
       this.advance();
     } else if (this.token[0] == 'INFINITY') {
       result = 'infinity';
@@ -660,188 +651,175 @@ class textToAst {
     } else if (this.token[0] == 'VAR' || this.token[0] == 'VARMULTICHAR') {
       result = this.token[1];
 
-      if (this.appliedFunctionSymbols.includes(result)
-	  || this.functionSymbols.includes(result))  {
-	var must_apply=false
-	if(this.appliedFunctionSymbols.includes(result))
-	  must_apply = true;
+      if (this.appliedFunctionSymbols.includes(result) ||
+        this.functionSymbols.includes(result)) {
+        var must_apply = false
+        if (this.appliedFunctionSymbols.includes(result))
+          must_apply = true;
 
-	result = result.toLowerCase();
-	this.advance();
+        result = result.toLowerCase();
+        this.advance();
 
-	if(this.token[0]=='_') {
-	  this.advance();
-	  var subresult =  this.baseFactor();
+        if (this.token[0] == '_') {
+          this.advance();
+          var subresult = this.baseFactor();
 
-	  // since baseFactor could return false, must check
-	  if(subresult === false) {
-	    if (this.token[0] == "EOF") {
-	      throw new ParseError("Unexpected end of input",
-				   this.lexer.location);
-	    }
-	    else {
-	      throw new ParseError("Invalid location of '" + this.token[1]
-				   + "'", this.lexer.location) ;
-	    }
-	  }
-	  result = ['_', result, subresult];
-	}
+          // since baseFactor could return false, must check
+          if (subresult === false) {
+            if (this.token[0] == "EOF") {
+              throw new ParseError("Unexpected end of input",
+                this.lexer.location);
+            } else {
+              throw new ParseError("Invalid location of '" + this.token[1] +
+                "'", this.lexer.location);
+            }
+          }
+          result = ['_', result, subresult];
+        }
 
-	var n_primes=0;
-	while(this.token[0] == "'") {
-	  n_primes += 1;
-	  result = ['prime', result];
-	  this.advance();
-	}
+        var n_primes = 0;
+        while (this.token[0] == "'") {
+          n_primes += 1;
+          result = ['prime', result];
+          this.advance();
+        }
 
-	if(this.token[0]=='^') {
-	  this.advance();
-	  result = ['^', result, this.factor()];
-	}
+        if (this.token[0] == '^') {
+          this.advance();
+          result = ['^', result, this.factor()];
+        }
 
-	if (this.token[0] == '(') {
-	  this.advance();
-	  var parameters = this.statement_list();
+        if (this.token[0] == '(') {
+          this.advance();
+          var parameters = this.statement_list();
 
-	  if (this.token[0] != ')') {
-	    throw new ParseError('Expected )', this.lexer.location);
-	  }
-	  this.advance();
+          if (this.token[0] != ')') {
+            throw new ParseError('Expected )', this.lexer.location);
+          }
+          this.advance();
 
-	  if(parameters[0] == 'list') {
-	    // rename from list to tuple
-	    parameters[0] = 'tuple';
-	  }
+          if (parameters[0] == 'list') {
+            // rename from list to tuple
+            parameters[0] = 'tuple';
+          }
 
-	  result = ['apply', result, parameters];
-	}
-	else {
-	  // if was an applied function symbol,
-	  // cannot omit argument
-	  if(must_apply) {
-	    if(!this.allowSimplifiedFunctionApplication)
-	      throw new ParseError("Expected ( after function",
-				   this.lexer.location);
+          result = ['apply', result, parameters];
+        } else {
+          // if was an applied function symbol,
+          // cannot omit argument
+          if (must_apply) {
+            if (!this.allowSimplifiedFunctionApplication)
+              throw new ParseError("Expected ( after function",
+                this.lexer.location);
 
-	    // if allow simplied function application
-	    // let the argument be the next factor
-	    result = ['apply', result, this.factor()];
-	  }
-	}
+            // if allow simplied function application
+            // let the argument be the next factor
+            result = ['apply', result, this.factor()];
+          }
+        }
+      } else {
+        // determine if should split text into single letter factors
+        var split = this.splitSymbols;
+
+        if (split) {
+          if (this.token[0] == 'VARMULTICHAR' ||
+            this.unsplitSymbols.includes(result) ||
+            result.length == 1) {
+            split = false;
+          } else if (result.match(/[\d]/g)) {
+            // don't split if has a number in it
+            split = false;
+          }
+        }
+
+        if (split) {
+          // so that each character gets processed separately
+          // put all characters back on the input
+          // but with spaces
+          // then process again
+
+          for (var i = result.length - 1; i >= 0; i--) {
+            this.lexer.unput(" ");
+            this.lexer.unput(result[i]);
+          }
+          this.advance();
+
+          return this.baseFactor();
+        } else {
+          this.advance();
+        }
       }
-      else {
-	// determine if should split text into single letter factors
-	var split = this.splitSymbols;
-
-	if(split) {
-	  if(this.token[0] == 'VARMULTICHAR' ||
-	     this.unsplitSymbols.includes(result)
-	     || result.length == 1) {
-	    split = false;
-	  }
-	  else if(result.match(/[\d]/g)) {
-	    // don't split if has a number in it
-	    split = false;
-	  }
-	}
-
-	if (split) {
-	  // so that each character gets processed separately
-	  // put all characters back on the input
-	  // but with spaces
-	  // then process again
-
-	  for(var i=result.length-1; i>=0; i--) {
-	    this.lexer.unput(" ");
-	    this.lexer.unput(result[i]);
-	  }
-	  this.advance();
-
-	  return this.baseFactor();
-	}
-	else {
-	  this.advance();
-	}
-      }
-    } else if (this.token[0] == '(' || this.token[0] == '['
-	       || this.token[0] == '{') {
+    } else if (this.token[0] == '(' || this.token[0] == '[' ||
+      this.token[0] == '{') {
       var token_left = this.token[0];
       var expected_right, other_right;
-      if(this.token[0] == '(') {
-	expected_right = ')';
-	other_right = ']';
-      }
-      else if(this.token[0] == '[') {
-	expected_right = ']';
-	other_right = ')';
-      }
-      else {
-	expected_right = '}';
-	other_right = null;
+      if (this.token[0] == '(') {
+        expected_right = ')';
+        other_right = ']';
+      } else if (this.token[0] == '[') {
+        expected_right = ']';
+        other_right = ')';
+      } else {
+        expected_right = '}';
+        other_right = null;
       }
 
       this.advance();
       result = this.statement_list();
 
       var n_elements = 1;
-      if(result[0] == "list") {
-	n_elements = result.length-1;
+      if (result[0] == "list") {
+        n_elements = result.length - 1;
       }
 
       if (this.token[0] != expected_right) {
-	if(n_elements != 2 || other_right === null) {
-	  throw new ParseError('Expected ' + expected_right,
-			       this.lexer.location);
-	}
-	else if (this.token[0] != other_right) {
-	  throw new ParseError('Expected ) or ]', this.lexer.location);
-	}
+        if (n_elements != 2 || other_right === null) {
+          throw new ParseError('Expected ' + expected_right,
+            this.lexer.location);
+        } else if (this.token[0] != other_right) {
+          throw new ParseError('Expected ) or ]', this.lexer.location);
+        }
 
-	// half-open interval
-	result[0] = 'tuple';
-	result = ['interval', result];
-	var closed;
-	if(token_left == '(')
-	  closed = ['tuple', false, true];
-	else
-	  closed = ['tuple', true, false];
-	result.push(closed);
+        // half-open interval
+        result[0] = 'tuple';
+        result = ['interval', result];
+        var closed;
+        if (token_left == '(')
+          closed = ['tuple', false, true];
+        else
+          closed = ['tuple', true, false];
+        result.push(closed);
 
-      }
-      else if (n_elements >= 2) {
-	if(token_left == '(') {
-	  result[0]  = 'tuple';
-	}
-	else if(token_left == '[') {
-	  result[0] = 'array';
-	}
-	else {
-	  result[0] = 'set';
-	}
-      }
-      else if (token_left === '{') {
-	// singleton set
-	result = ['set'].concat(result);
+      } else if (n_elements >= 2) {
+        if (token_left == '(') {
+          result[0] = 'tuple';
+        } else if (token_left == '[') {
+          result[0] = 'array';
+        } else {
+          result[0] = 'set';
+        }
+      } else if (token_left === '{') {
+        // singleton set
+        result = ['set'].concat(result);
       }
 
       this.advance();
     }
 
     if (this.token[0] == '_') {
-      if(result === false) {
-	throw new ParseError("Invalid location of _", this.lexer.location);
+      if (result === false) {
+        throw new ParseError("Invalid location of _", this.lexer.location);
       }
       this.advance();
-      var subresult =  this.baseFactor();
+      var subresult = this.baseFactor();
 
-      if(subresult === false) {
-	if (this.token[0] == "EOF") {
-	  throw new ParseError("Unexpected end of input", this.lexer.location);
-	}
-	else {
-	  throw new ParseError("Invalid location of '" + this.token[1] + "'",
-			       this.lexer.location);
-	}
+      if (subresult === false) {
+        if (this.token[0] == "EOF") {
+          throw new ParseError("Unexpected end of input", this.lexer.location);
+        } else {
+          throw new ParseError("Invalid location of '" + this.token[1] + "'",
+            this.lexer.location);
+        }
       }
       return ['_', result, subresult];
     }

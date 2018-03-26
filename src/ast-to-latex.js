@@ -21,7 +21,7 @@
 
 "use strict";
 
-var operators = {
+const operators = {
     "+": function(operands) { return operands.join( ' ' ); },
     "-": function(operands) { return "- " + operands[0]; },
     "*": function(operands) { return operands.join( " " ); },
