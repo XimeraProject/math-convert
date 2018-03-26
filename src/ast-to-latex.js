@@ -58,335 +58,335 @@ const operators = {
     "intersect": function (operands) { return operands.join(' \\cap '); },
 };
 
+class astToLatex {
 
-function statement(tree) {
-    if ((typeof tree === 'string') || (typeof tree === 'number')) {
-	return single_statement(tree);
-    }
+  convert(tree){
+    return this.statement(tree);
+  }
 
-    var operator = tree[0];
-    var operands = tree.slice(1);
+  statement(tree) {
+      if ((typeof tree === 'string') || (typeof tree === 'number')) {
+  	return this.single_statement(tree);
+      }
 
-    if((!(operator in operators)) && operator!=="apply")
-	throw new Error("Badly formed ast: operator " + operator + " not recognized.");
+      var operator = tree[0];
+      var operands = tree.slice(1);
 
-    if (operator === 'and' || operator === 'or')  {
-	return operators[operator]( operands.map( function(v,i) {
-	    var result = single_statement(v);
-	    // for clarity, add parenthesis unless result is
-	    // single quantity (with no spaces) or already has parens
-	    if (result.toString().match(/ /)
-		&& (!(result.toString().match(/^\\left\(.*\\right\)$/))))
-		return '\\left(' + result  + '\\right)';
-	    else
-		return result;
-	}));
-    }
-    return single_statement(tree);
+      if((!(operator in operators)) && operator!=="apply")
+  	throw new Error("Badly formed ast: operator " + operator + " not recognized.");
+
+      if (operator === 'and' || operator === 'or')  {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    var result = single_statement(v);
+  	    // for clarity, add parenthesis unless result is
+  	    // single quantity (with no spaces) or already has parens
+  	    if (result.toString().match(/ /)
+  		&& (!(result.toString().match(/^\\left\(.*\\right\)$/))))
+  		return '\\left(' + result  + '\\right)';
+  	    else
+  		return result;
+  	}));
+      }
+      return this.single_statement(tree);
+  }
+
+  single_statement(tree) {
+      if ((typeof tree === 'string') || (typeof tree === 'number')) {
+  	return this.expression(tree);
+      }
+
+      var operator = tree[0];
+      var operands = tree.slice(1);
+
+      if (operator == 'not') {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    var result = this.single_statement(v);
+  	    // for clarity, add parenthesis unless result is
+  	    // single quantity (with no spaces) or already has parens
+  	    if (result.toString().match(/ /)
+  		&& (!(result.toString().match(/^\\left\(.*\\right\)$/))))
+  		return '\\left(' + result  + '\\right)';
+  	    else
+  		return result;
+  	}));
+      }
+
+      if((operator == '=') || (operator == 'ne')
+         || (operator == '<') || (operator == '>')
+         || (operator == 'le') || (operator == 'ge')
+         || (operator == 'in') || (operator == 'notin')
+         || (operator == 'ni') || (operator == 'notni')
+         || (operator == 'subset') || (operator == 'notsubset')
+         || (operator == 'superset') || (operator == 'notsuperset')) {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    return this.expression(v);
+  	}));
+      }
+
+      if(operator == 'lts' || operator == 'gts') {
+  	var args = operands[0]
+  	var strict = operands[1];
+
+  	if(args[0] != 'tuple' || strict[0] != 'tuple')
+  	    // something wrong if args or strict are not tuples
+  	    throw new Error("Badly formed ast");
+
+  	var result = this.expression(args[1]);
+  	for(var i=1; i< args.length-1; i++) {
+  	    if(strict[i]) {
+  		if(operator == 'lts')
+  		    result += " < ";
+  		else
+  		    result += " > ";
+  	    }
+  	    else {
+  		if(operator == 'lts') {
+  		    result += " \\le ";
+  		}
+  		else {
+  		    result += " \\ge ";
+  		}
+  	    }
+  	    result += this.expression(args[i+1]);
+  	}
+  	return result;
+      }
+
+      return this.expression(tree);
+  }
+
+  expression(tree) {
+      if ((typeof tree === 'string') || (typeof tree === 'number')) {
+  	return this.term(tree);
+      }
+
+      var operator = tree[0];
+      var operands = tree.slice(1);
+
+      if (operator == '+') {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    if(i>0)
+  		return this.termWithPlusIfNotNegated(v);
+  	    else
+  		return this.term(v);
+  	} ));
+      }
+
+      if ((operator == 'union') || (operator == 'intersect')) {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    return this.term(v);
+  	}));
+      }
+
+      return this.term(tree);
+  }
+
+  term(tree) {
+      if ((typeof tree === 'string') || (typeof tree === 'number')) {
+  	return this.factor(tree);
+      }
+
+      var operator = tree[0];
+      var operands = tree.slice(1);
+
+      if (operator == '-') {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    return this.term(v);
+  	}));
+      }
+      if (operator == '*') {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    var result;
+  	    if(i > 0) {
+  		result = this.factorWithParenthesesIfNegated(v);
+  		if (result.toString().match( /^[0-9]/ ))
+  		    return '\\cdot ' + result;
+  		else
+  		    return '\\, ' + result
+  	    }
+  	    else
+  		return this.factor(v);
+  	}));
+      }
+
+      if (operator == '/') {
+  	return operators[operator]( operands.map( function(v,i) { return expression(v); } ) );
+      }
+
+      return this.factor(tree);
+  }
+
+  simple_factor_or_function_or_parens(tree) {
+      // return true if
+      // factor(tree) is a single character
+      // or tree is a number
+      // or tree is a string
+      // or tree is a function call
+      // or factor(tree) is in parens
+
+      var result = this.factor(tree);
+
+      if (result.toString().length == 1
+  	|| (typeof tree == 'number')
+  	|| (typeof tree == 'string')
+  	|| (tree[0] == 'apply')
+  	|| result.toString().match( /^\\left\(.*\\right\)$/)
+         )
+  	return true;
+      else
+  	return false
+  }
+
+  factor(tree) {
+      if (typeof tree === 'string') {
+  	if (tree == "infinity") return "\\infty";
+  	if (tree.length > 1) return "\\" + tree;
+  	return tree;
+      }
+
+      if (typeof tree === 'number') {
+  	return tree;
+      }
+
+      var operator = tree[0];
+      var operands = tree.slice(1);
+
+
+      if (operator === "^") {
+  	var operand0 = this.factor(operands[0]);
+
+  	// so that f_(st)'^2(x) doesn't get extra parentheses
+  	// (and no longer recognized as function call)
+  	// check for simple factor after removing primes
+  	var remove_primes = operands[0];
+  	while(remove_primes[0] == 'prime') {
+  	    remove_primes=remove_primes[1];
+  	}
+
+  	if(!(simple_factor_or_function_or_parens(remove_primes) ||
+  	     (remove_primes[0] == '_' &&  (typeof remove_primes[1] == 'string'))
+  	    ))
+  	    operand0 = '\\left(' + operand0.toString() + '\\right)';
+
+  	return operand0 + '^{' + this.statement(operands[1]) + '}';
+      }
+      else if (operator === "_") {
+  	var operand0 = factor(operands[0]);
+  	if(!(this.simple_factor_or_function_or_parens(operands[0])))
+  	    operand0 = '\\left(' + operand0.toString() + '\\right)';
+
+  	return operand0 + '_{' + this.statement(operands[1]) + '}';
+      }
+      else if(operator === "prime") {
+  	var op = operands[0];
+
+  	var n_primes=1;
+  	while(op[0] === "prime") {
+  	    n_primes+=1;
+  	    op=op[1];
+  	}
+
+  	var result = this.factor(op);
+
+  	if (!(this.simple_factor_or_function_or_parens(op) ||
+  	      (op[0] == '_' &&  (typeof op[1] == 'string'))
+  	     ))
+  	    result = '\\left(' + result.toString() + '\\right)';
+  	for(var i=0; i<n_primes; i++) {
+  	    result += "'";
+  	}
+  	return result;
+      }
+      else if(operator === "-") {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    return this.factor(v);
+  	}));
+      }
+      else if(operator === 'tuple' || operator === 'array'
+  	    || operator === 'list'
+  	    || operator === 'set' || operator === 'vector') {
+  	return operators[operator]( operands.map( function(v,i) {
+  	    return this.statement(v);
+  	}));
+
+      }
+      else if(operator === 'interval') {
+
+  	var args = operands[0];
+  	var closed = operands[1];
+  	if(args[0] !== 'tuple' || closed[0] !== 'tuple')
+  	    throw new Error("Badly formed ast");
+
+  	var result = this.statement(args[1]) + ", "
+  	    + this.statement(args[2]);
+
+  	if(closed[1])
+  	    result = '\\left[ ' + result;
+  	else
+  	    result = '\\left( ' + result;
+
+  	if(closed[2])
+  	    result = result + ' \\right]';
+  	else
+  	    result = result + ' \\right)';
+
+  	return result;
+
+      }
+      else if(operator == 'apply'){
+
+  	if(operands[0] === 'abs') {
+  	    return '\\left|' + this.statement(operands[1]) + '\\right|';
+  	}
+
+  	if (operands[0] === "factorial") {
+  	    var result = this.factor(operands[1]);
+  	    if(this.simple_factor_or_function_or_parens(operands[1]) ||
+  	       (operands[1][0] == '_' &&  (typeof operands[1][1] == 'string'))
+  	      )
+  		return result + "!";
+  	    else
+  		return '\\left(' + result.toString() + '\\right)!';
+  	}
+
+  	if(operands[0] == 'sqrt') {
+  	    return '\\sqrt{' + this.statement(operands[1]) + '}';
+  	}
+
+  	var f = this.factor(operands[0]);
+  	var f_args = this.statement(operands[1]);
+
+  	if(operands[1][0] != 'tuple')
+  	    f_args = "\\left(" + f_args + "\\right)";
+
+  	return f+f_args;
+      }
+      else {
+  	return '\\left(' + this.statement(tree) + '\\right)';
+      }
+  }
+
+  factorWithParenthesesIfNegated(tree){
+      var result = this.factor(tree);
+
+      if (result.toString().match( /^-/ ))
+  	return '\\left(' + result.toString() + '\\right)';
+
+      // else
+      return result;
+  }
+
+  termWithPlusIfNotNegated(tree){
+      var result = this.term(tree);
+
+      if (!result.toString().match( /^-/ ))
+  	return '+ ' + result.toString();
+
+      // else
+      return result;
+  }
+
 }
 
-function single_statement(tree) {
-    if ((typeof tree === 'string') || (typeof tree === 'number')) {
-	return expression(tree);
-    }
-
-    var operator = tree[0];
-    var operands = tree.slice(1);
-
-    if (operator == 'not') {
-	return operators[operator]( operands.map( function(v,i) {
-	    var result = single_statement(v);
-	    // for clarity, add parenthesis unless result is
-	    // single quantity (with no spaces) or already has parens
-	    if (result.toString().match(/ /)
-		&& (!(result.toString().match(/^\\left\(.*\\right\)$/))))
-		return '\\left(' + result  + '\\right)';
-	    else
-		return result;
-	}));
-    }
-
-    if((operator == '=') || (operator == 'ne')
-       || (operator == '<') || (operator == '>')
-       || (operator == 'le') || (operator == 'ge')
-       || (operator == 'in') || (operator == 'notin')
-       || (operator == 'ni') || (operator == 'notni')
-       || (operator == 'subset') || (operator == 'notsubset')
-       || (operator == 'superset') || (operator == 'notsuperset')) {
-	return operators[operator]( operands.map( function(v,i) {
-	    return expression(v);
-	}));
-    }
-
-    if(operator == 'lts' || operator == 'gts') {
-	var args = operands[0]
-	var strict = operands[1];
-
-	if(args[0] != 'tuple' || strict[0] != 'tuple')
-	    // something wrong if args or strict are not tuples
-	    throw new Error("Badly formed ast");
-
-	var result = expression(args[1]);
-	for(var i=1; i< args.length-1; i++) {
-	    if(strict[i]) {
-		if(operator == 'lts')
-		    result += " < ";
-		else
-		    result += " > ";
-	    }
-	    else {
-		if(operator == 'lts') {
-		    result += " \\le ";
-		}
-		else {
-		    result += " \\ge ";
-		}
-	    }
-	    result += expression(args[i+1]);
-	}
-	return result;
-    }
-
-    return expression(tree);
-}
-
-
-function expression(tree) {
-    if ((typeof tree === 'string') || (typeof tree === 'number')) {
-	return term(tree);
-    }
-
-    var operator = tree[0];
-    var operands = tree.slice(1);
-
-    if (operator == '+') {
-	return operators[operator]( operands.map( function(v,i) {
-	    if(i>0)
-		return termWithPlusIfNotNegated(v);
-	    else
-		return term(v);
-	} ));
-    }
-
-    if ((operator == 'union') || (operator == 'intersect')) {
-	return operators[operator]( operands.map( function(v,i) {
-	    return term(v);
-	}));
-    }
-
-    return term(tree);
-}
-
-function term(tree) {
-    if ((typeof tree === 'string') || (typeof tree === 'number')) {
-	return factor(tree);
-    }
-
-    var operator = tree[0];
-    var operands = tree.slice(1);
-
-    if (operator == '-') {
-	return operators[operator]( operands.map( function(v,i) {
-	    return term(v);
-	}));
-    }
-    if (operator == '*') {
-	return operators[operator]( operands.map( function(v,i) {
-	    var result;
-	    if(i > 0) {
-		result = factorWithParenthesesIfNegated(v);
-		if (result.toString().match( /^[0-9]/ ))
-		    return '\\cdot ' + result;
-		else
-		    return '\\, ' + result
-	    }
-	    else
-		return factor(v);
-	}));
-    }
-
-    if (operator == '/') {
-	return operators[operator]( operands.map( function(v,i) { return expression(v); } ) );
-    }
-
-    return factor(tree);
-}
-
-function simple_factor_or_function_or_parens(tree) {
-    // return true if
-    // factor(tree) is a single character
-    // or tree is a number
-    // or tree is a string
-    // or tree is a function call
-    // or factor(tree) is in parens
-
-    var result=factor(tree);
-
-    if (result.toString().length == 1
-	|| (typeof tree == 'number')
-	|| (typeof tree == 'string')
-	|| (tree[0] == 'apply')
-	|| result.toString().match( /^\\left\(.*\\right\)$/)
-       )
-	return true;
-    else
-	return false
-}
-
-
-function factor(tree) {
-    if (typeof tree === 'string') {
-	if (tree == "infinity") return "\\infty";
-	if (tree.length > 1) return "\\" + tree;
-	return tree;
-    }
-
-    if (typeof tree === 'number') {
-	return tree;
-    }
-
-    var operator = tree[0];
-    var operands = tree.slice(1);
-
-
-    if (operator === "^") {
-	var operand0 = factor(operands[0]);
-
-	// so that f_(st)'^2(x) doesn't get extra parentheses
-	// (and no longer recognized as function call)
-	// check for simple factor after removing primes
-	var remove_primes = operands[0];
-	while(remove_primes[0] == 'prime') {
-	    remove_primes=remove_primes[1];
-	}
-
-	if(!(simple_factor_or_function_or_parens(remove_primes) ||
-	     (remove_primes[0] == '_' &&  (typeof remove_primes[1] == 'string'))
-	    ))
-	    operand0 = '\\left(' + operand0.toString() + '\\right)';
-
-	return operand0 + '^{' + statement(operands[1]) + '}';
-    }
-    else if (operator === "_") {
-	var operand0 = factor(operands[0]);
-	if(!(simple_factor_or_function_or_parens(operands[0])))
-	    operand0 = '\\left(' + operand0.toString() + '\\right)';
-
-	return operand0 + '_{' + statement(operands[1]) + '}';
-    }
-    else if(operator === "prime") {
-	var op = operands[0];
-
-	var n_primes=1;
-	while(op[0] === "prime") {
-	    n_primes+=1;
-	    op=op[1];
-	}
-
-	var result = factor(op);
-
-	if (!(simple_factor_or_function_or_parens(op) ||
-	      (op[0] == '_' &&  (typeof op[1] == 'string'))
-	     ))
-	    result = '\\left(' + result.toString() + '\\right)';
-	for(var i=0; i<n_primes; i++) {
-	    result += "'";
-	}
-	return result;
-    }
-    else if(operator === "-") {
-	return operators[operator]( operands.map( function(v,i) {
-	    return factor(v);
-	}));
-    }
-    else if(operator === 'tuple' || operator === 'array'
-	    || operator === 'list'
-	    || operator === 'set' || operator === 'vector') {
-	return operators[operator]( operands.map( function(v,i) {
-	    return statement(v);
-	}));
-
-    }
-    else if(operator === 'interval') {
-
-	var args = operands[0];
-	var closed = operands[1];
-	if(args[0] !== 'tuple' || closed[0] !== 'tuple')
-	    throw new Error("Badly formed ast");
-
-	var result = statement(args[1]) + ", "
-	    + statement(args[2]);
-
-	if(closed[1])
-	    result = '\\left[ ' + result;
-	else
-	    result = '\\left( ' + result;
-
-	if(closed[2])
-	    result = result + ' \\right]';
-	else
-	    result = result + ' \\right)';
-
-	return result;
-
-    }
-    else if(operator == 'apply'){
-
-	if(operands[0] === 'abs') {
-	    return '\\left|' + statement(operands[1]) + '\\right|';
-	}
-
-	if (operands[0] === "factorial") {
-	    var result = factor(operands[1]);
-	    if(simple_factor_or_function_or_parens(operands[1]) ||
-	       (operands[1][0] == '_' &&  (typeof operands[1][1] == 'string'))
-	      )
-		return result + "!";
-	    else
-		return '\\left(' + result.toString() + '\\right)!';
-	}
-
-	if(operands[0] == 'sqrt') {
-	    return '\\sqrt{' + statement(operands[1]) + '}';
-	}
-
-	var f = factor(operands[0]);
-	var f_args = statement(operands[1]);
-
-	if(operands[1][0] != 'tuple')
-	    f_args = "\\left(" + f_args + "\\right)";
-
-	return f+f_args;
-    }
-    else {
-	return '\\left(' + statement(tree) + '\\right)';
-    }
-}
-
-function factorWithParenthesesIfNegated(tree)
-{
-    var result = factor(tree);
-
-    if (result.toString().match( /^-/ ))
-	return '\\left(' + result.toString() + '\\right)';
-
-    // else
-    return result;
-}
-
-function termWithPlusIfNotNegated(tree)
-{
-    var result = term(tree);
-
-    if (!result.toString().match( /^-/ ))
-	return '+ ' + result.toString();
-
-    // else
-    return result;
-}
-
-function astToLatex(tree) {
-    return statement(tree);
-}
 
 export default astToLatex ;
