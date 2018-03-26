@@ -11,15 +11,15 @@
 //   Third element (optional): replacement for actual string matched
 
 
-// regular expression to identify whitespace at beginning
-const initial_whitespace = new RegExp('^\\s+');
-
 class lexer {
-  constructor(token_rules) {
+  constructor(token_rules, whitespace='\\s+') {
 
     this.input = '';
     this.location = 0;
     this.token_rules=[];
+
+    // regular expression to identify whitespace at beginning
+    this.initial_whitespace = new RegExp('^' + whitespace);
     
     // convert first element of each rule to a regular expression that
     // starts at the beginning of the string
@@ -44,7 +44,7 @@ class lexer {
 
 
     // first remove any initial whitespace and adjust location
-    let result = initial_whitespace.exec(this.input);
+    let result = this.initial_whitespace.exec(this.input);
     if(result) {
       let n_whitespace = result[0].length;
       this.input = this.input.slice(n_whitespace);
