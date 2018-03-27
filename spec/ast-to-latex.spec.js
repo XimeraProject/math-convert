@@ -263,10 +263,6 @@ const objectsToTest = [{
     'latex': '\\sin\\left(x\\right)'
   },
   {
-    'ast': ['*', 'f', 'x'],
-    'latex': 'f \\, x'
-  },
-  {
     'ast': ['*', ['apply', ['^', 'sin', 'x'], 'y'], 'z'],
     'latex': '\\sin^{x}\\left(y\\right) \\, z'
   },
@@ -351,6 +347,10 @@ const objectsToTest = [{
     'latex': '\\left( 1, 2 \\right)'
   },
   {
+    'ast': ['vector', 1, 2],
+    'latex': '\\left( 1, 2 \\right)'
+  },
+  {
     'ast': ['list', 1, 2, 3],
     'latex': '1, 2, 3'
   },
@@ -375,20 +375,12 @@ const objectsToTest = [{
     'latex': '7 \\ne 2'
   },
   {
-    'ast': ['ne', 7, 2],
-    'latex': '7 \\ne 2'
-  },
-  {
     'ast': ['not', ['=', 'x', 'y']],
     'latex': '\\lnot \\left(x = y\\right)'
   },
   {
     'ast': ['not', ['=', 'x', 'y']],
     'latex': '\\lnot \\left(x = y\\right)'
-  },
-  {
-    'ast': ['>', 'x', 'y'],
-    'latex': 'x > y'
   },
   {
     'ast': ['>', 'x', 'y'],
@@ -421,10 +413,6 @@ const objectsToTest = [{
       ['tuple', false, false]
     ],
     'latex': 'x \\ge y \\ge z'
-  },
-  {
-    'ast': ['<', 'x', 'y'],
-    'latex': 'x < y'
   },
   {
     'ast': ['<', 'x', 'y'],
