@@ -125,8 +125,22 @@ const operators = {
   },
 };
 
+// defaults for parsers if not overridden by context
+
+
+// allowed multicharacter latex symbols
+// in addition to the below applied function symbols
+const allowedLatexSymbolsDefault = ['pi', 'theta', 'theta', 'Theta', 'alpha', 'nu', 'beta', 'xi', 'Xi', 'gamma', 'Gamma', 'delta', 'Delta', 'pi', 'Pi', 'epsilon', 'epsilon', 'rho', 'rho', 'zeta', 'sigma', 'Sigma', 'eta', 'tau', 'upsilon', 'Upsilon', 'iota', 'phi', 'phi', 'Phi', 'kappa', 'chi', 'lambda', 'Lambda', 'psi', 'Psi', 'omega', 'Omega', "abs", "exp", "log", "ln", "log10", "sign", "sqrt", "erf", "acos", "acosh", "acot", "acoth", "acsc", "acsch", "asec", "asech", "asin", "asinh", "atan", "atanh", "cos", "cosh", "cot", "coth", "csc", "csch", "sec", "sech", "sin", "sinh", "tan", "tanh", 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot', 'cosec', 'arg'];
+
+
 class astToLatex {
 
+  constructor({
+    allowedLatexSymbols=allowedLatexSymbolsDefault,
+  } = {}){
+    this.allowedLatexSymbols = allowedLatexSymbols;
+  }
+  
   convert(tree) {
     return this.statement(tree);
   }
@@ -308,8 +322,14 @@ class astToLatex {
 
   factor(tree) {
     if (typeof tree === 'string') {
-      if (tree == "infinity") return "\\infty";
-      if (tree.length > 1) return "\\" + tree;
+      if (tree == "infinity")
+	return "\\infty";
+      if (tree.length > 1) {
+	if(this.allowedLatexSymbols.includes(tree))
+	  return "\\" + tree;
+	else
+	  return "\\var{" + tree + '}';
+      }
       return tree;
     }
 

@@ -94,7 +94,7 @@ const objectsToTest = [{
   },
   {
     'ast': ['*', 'blah', 'x'],
-    'latex': '\\blah \\, x'
+    'latex': '\\var{blah} \\, x'
   },
   {
     'ast': ['apply', 'abs', ['=', ['+', 'x', 3], 2]],

@@ -253,6 +253,8 @@ const latex_rules = [
   ['\'', '\''],
   ['_', '_'],
 
+  ['\\\\var\\s*\{\\s*[a-zA-Z0-9]+\\s*\}', 'VARMULTICHAR'],
+  
   ['\\\\[a-zA-Z][a-zA-Z0-9]*', 'LATEXCOMMAND'],
   ['[a-zA-Z]', 'VAR']
 ];
@@ -263,6 +265,11 @@ const latex_rules = [
 // if true, allowed applied functions to omit parentheses around argument
 // if false, omitting parentheses will lead to a Parse Error
 const allowSimplifiedFunctionApplicationDefault = true;
+
+
+// allowed multicharacter latex symbols
+// in addition to the below applied function symbols
+const allowedLatexSymbolsDefault = ['pi', 'theta', 'theta', 'Theta', 'alpha', 'nu', 'beta', 'xi', 'Xi', 'gamma', 'Gamma', 'delta', 'Delta', 'pi', 'Pi', 'epsilon', 'epsilon', 'rho', 'rho', 'zeta', 'sigma', 'Sigma', 'eta', 'tau', 'upsilon', 'Upsilon', 'iota', 'phi', 'phi', 'Phi', 'kappa', 'chi', 'lambda', 'Lambda', 'psi', 'Psi', 'omega', 'Omega'];
 
 // Applied functions must be given an argument so that
 // they are applied to the argument
@@ -277,10 +284,12 @@ const functionSymbolsDefault = ['f', 'g'];
 class latexToAst {
   constructor({
     allowSimplifiedFunctionApplication=allowSimplifiedFunctionApplicationDefault,
+    allowedLatexSymbols=allowedLatexSymbolsDefault,
     appliedFunctionSymbols=appliedFunctionSymbolsDefault,
     functionSymbols=functionSymbolsDefault
   } = {}){
     this.allowSimplifiedFunctionApplication = allowSimplifiedFunctionApplication;
+    this.allowedLatexSymbols = allowedLatexSymbols;
     this.appliedFunctionSymbols = appliedFunctionSymbols;
     this.functionSymbols = functionSymbols;
 
@@ -666,11 +675,24 @@ class latexToAst {
 	result = ['apply', 'sqrt', parameter];
       else
 	result = ['^', parameter, ['/', 1, root]];
-    } else if (this.token[0] == 'VAR' || this.token[0] == 'LATEXCOMMAND') {
+    } else if (this.token[0] == 'VAR' || this.token[0] == 'LATEXCOMMAND'
+	      || this.token[0] == 'VARMULTICHAR') {
       result = this.token[1];
 
-      if(this.token[0] == 'LATEXCOMMAND')
-	result=result.slice(1);
+      if(this.token[0] == 'LATEXCOMMAND') {
+	result=result.slice(1); 
+	if(!(this.appliedFunctionSymbols.includes(result)
+	     || this.functionSymbols.includes(result)
+	     || this.allowedLatexSymbols.includes(result)
+	    )) {
+	  throw new ParseError("Unrecognized latex command " + this.token[1],
+			       this.lexer.location);
+	}
+      }
+      else if(this.token[0] == 'VARMULTICHAR') {
+	// strip out name of variable from \var command
+	result = /\\var\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(result)[1];
+      }
 
       if (this.appliedFunctionSymbols.includes(result)
 	  || this.functionSymbols.includes(result))  {

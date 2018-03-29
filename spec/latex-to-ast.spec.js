@@ -27,7 +27,7 @@ var trees = {
   '\\cos(\\theta)': ['apply', 'cos','theta'],
   'cos(x)': ['*', 'c', 'o', 's', 'x'],
   '|\\sin(|x|)|': ['apply', 'abs', ['apply', 'sin', ['apply', 'abs', 'x']]],
-  '\\blah(x)': ['*', 'blah', 'x'],
+  '\\var{blah}(x)': ['*', 'blah', 'x'],
   '|x+3=2|': ['apply', 'abs', ['=', ['+', 'x', 3], 2]],
   'x_y_z': ['_', 'x', ['_','y','z']],
   'x_{y_z}': ['_', 'x', ['_','y','z']],
@@ -208,19 +208,22 @@ test("function symbols", function () {
 
 test("applied function symbols", function () {
 
-  let converter = new latexToAst({appliedFunctionSymbols: []});
+  let converter = new latexToAst({appliedFunctionSymbols: [],
+				  allowedLatexSymbols: ['custom', 'sin']});
   expect(converter.convert('\\sin(x) + \\custom(y)')).toEqual(
     ['+', ['*', 'sin', 'x'], ['*', 'custom', 'y']]);
   expect(converter.convert('\\sin x  + \\custom y')).toEqual(
     ['+', ['*', 'sin', 'x'], ['*', 'custom', 'y']]);
 
-  converter = new latexToAst({appliedFunctionSymbols: ['custom']});
+  converter = new latexToAst({appliedFunctionSymbols: ['custom'],
+			      allowedLatexSymbols: ['custom', 'sin']});
   expect(converter.convert('\\sin(x) + \\custom(y)')).toEqual(
     ['+', ['*', 'sin', 'x'], ['apply', 'custom', 'y']]);
   expect(converter.convert('\\sin x  + \\custom y')).toEqual(
     ['+', ['*', 'sin', 'x'], ['apply', 'custom', 'y']]);
 
-  converter = new latexToAst({appliedFunctionSymbols: ['custom', 'sin']});
+  converter = new latexToAst({appliedFunctionSymbols: ['custom', 'sin'],
+				  allowedLatexSymbols: ['custom', 'sin']});
   expect(converter.convert('\\sin(x) + \\custom(y)')).toEqual(
     ['+', ['apply', 'sin', 'x'], ['apply', 'custom', 'y']]);
   expect(converter.convert('\\sin x  + \\custom y')).toEqual(

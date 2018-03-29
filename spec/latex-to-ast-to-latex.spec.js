@@ -65,7 +65,7 @@ var inputs = [
   ['\\log e^{x}','\\log\\left(e^{x}\\right)'],
   'e^{x}',
   '\\exp(x)',
-  ['\\blah(x)', '\\blah x'],
+  ['\\var{blah}(x)', '\\var{blah} x'],
   '\\sqrt{x}',
   '\\sqrt{4}',
   '\\frac{1}{\\sqrt{3}}',	
