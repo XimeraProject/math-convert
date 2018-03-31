@@ -169,6 +169,11 @@ var inputs = [
   ['(a,b) notsubset (c,d)', '(a,b) ⊄ (c,d)'],
   ['(a,b) superset (c,d)', '(a,b) ⊃ (c,d)'],
   ['(a,b) notsuperset (c,d)', '(a,b) ⊅ (c,d)'],
+  ['dx / dt', 'dx/dt'],
+  '(dx)/(dt)',
+  ['d x/dt', '((dx)/d)t'],
+  'd^2x/dt^2',
+  ['d^2 x/dt^2', '((d^2x)/d)t^2'],
 ];
 
 

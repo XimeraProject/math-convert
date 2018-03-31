@@ -179,6 +179,10 @@ var inputs = [
   ['\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}', '\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}'],
   ['\\begin{matrix} \\\\ 1 \\\\ &2 \\\\ &&3 \\end{matrix}', '\\begin{bmatrix}0&0&0\\\\1&0&0\\\\0&2&0\\\\0&0&3\\end{bmatrix}'],
   ['\\begin{matrix} 1 \\\\ &2 \\\\ &&3& \\end{matrix}', '\\begin{bmatrix}1&0&0&0\\\\0&2&0&0\\\\0&0&3&0\\end{bmatrix}'],
+  '\\frac{dx}{dt}',
+  '\\frac{d x}{d t}',
+  '\\frac{d^2x}{dt^2}',
+  ['\\frac{d^2 x}{d t^2}','\\frac{d^{2} x}{d t^{2}}'],
 ];
 
 function clean(text) {

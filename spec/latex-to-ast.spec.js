@@ -152,6 +152,12 @@ var trees = {
   '\\begin{pmatrix}a + 3y & 2\\sin(\\theta)\\end{pmatrix}': ['matrix', ['tuple', 1, 2], ['tuple', ['tuple', ['+', 'a', ['*', 3, 'y']], ['*', 2, ['apply', 'sin', 'theta']]]]],
   '\\begin{bmatrix}3\\\\ \\\\ 4 & 5\\end{bmatrix}': ['matrix', ['tuple', 3, 2], ['tuple', ['tuple', 3, 0], ['tuple', 0, 0], ['tuple', 4, 5]]],
   '\\begin{matrix}8\\\\1&2&3\\end{matrix}': ['matrix', ['tuple', 2, 3], ['tuple', ['tuple', 8, 0, 0], ['tuple', 1, 2, 3]]],
+  '\\frac{dx}{dt}': ['derivative_leibniz', 'x', 't'],
+  '\\frac { dx } { dt }': ['derivative_leibniz', 'x', 't'],
+  '\\frac{d x}{d t}': ["/", ["*", "d", "x"], ["*", "d", "t"]],
+  '\\frac{dx_2}{dt}': ["/", ["*", "d", ["_", "x", 2]], ["*", "d", "t"]],
+  '\\frac{d^2x}{dt^2}': ['derivative_leibniz_mult', 2, 'x', 't'],
+  '\\frac{d^2x}{dt^3}': ["/", ["*", ["^", "d", 2], "x"], ["*", "d", ["^", "t", 3]]],
 };
 
 

@@ -158,6 +158,14 @@ var trees = {
   '+2': 2,
   'oo': 'infinity',
   '+oo': 'infinity',
+  'dx/dt': ['derivative_leibniz', 'x', 't'],
+  'dx / dt': ['derivative_leibniz', 'x', 't'],
+  'd x/dt': ["*", ["/", ["*", "d", "x"], "d"], "t"],
+  '(dx)/(dt)': ["/", ["*", "d", "x"], ["*", "d", "t"]],
+  'dx_2/dt': ["*", ["/", ["*", "d", ["_", "x", 2]], "d"], "t"],
+  'd^2x/dt^2': ['derivative_leibniz_mult', 2, 'x', 't'],
+  'd^2x/dt^3': ["*", ["/", ["*", ["^", "d", 2], "x"], "d"], ["^", "t", 3]],
+  
 };
 
 Object.keys(trees).forEach(function(string) {

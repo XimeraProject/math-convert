@@ -59,6 +59,9 @@ const unicode_operators = {
     "notsuperset": function(operands) { return operands[0] + " ⊅ " + operands[1]; },
     "union": function (operands) { return operands.join(' ∪ '); },
     "intersect": function (operands) { return operands.join(' ∩ '); },
+    "derivative_leibniz": function (operands) { return "d" + operands[0] + "/d" + operands[1]; },
+    "derivative_leibniz_mult": function (operands) { return "d^" + operands[0] + operands[1]+ "/d" + operands[2] + '^' + operands[0]; },
+  
 };
 
 const nonunicode_operators = {
@@ -98,6 +101,8 @@ const nonunicode_operators = {
     "notsuperset": function(operands) { return operands[0] + " notsuperset " + operands[1]; },
     "union": function (operands) { return operands.join(' union '); },
     "intersect": function (operands) { return operands.join(' intersect '); },
+    "derivative_leibniz": function (operands) { return "d" + operands[0] + "/d" + operands[1]; },
+    "derivative_leibniz_mult": function (operands) { return "d^" + operands[0] + operands[1]+ "/d" + operands[2] + '^' + operands[0]; },
 };
 
 
@@ -461,6 +466,9 @@ class astToText {
       
      return result;
 
+   }
+   else if(operator == 'derivative_leibniz' || operator == 'derivative_leibniz_mult') {
+     return this.operators[operator]( operands );
    }
    else if(operator == 'apply'){
 

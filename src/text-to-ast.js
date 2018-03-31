@@ -293,6 +293,11 @@ const text_rules = [
   ['\'', '\''],
   ['_', '_'],
 
+  ['d[a-zA-Z]\\s*\/\\s*d[a-zA-Z]\\b', 'DERIVATIVE'],
+
+  ['d\\^([0-9])[a-zA-Z]\\s*\/\\s*d[a-zA-Z]\\^\\1\\b', 'DERIVATIVEMULT'],
+
+  
   ['[a-zA-Z][a-zA-Z0-9]*', 'VAR']
 ];
 
@@ -648,6 +653,22 @@ class textToAst {
     } else if (this.token[0] == 'INFINITY') {
       result = 'infinity';
       this.advance();
+    } else if (this.token[0] == 'DERIVATIVE') {
+
+      let match = /d([a-zA-Z])\s*\/\s*d([a-zA-Z])/.exec(this.token[1]);
+
+      result = ['derivative_leibniz', match[1], match[2]];
+      this.advance();
+      return result;
+      
+    } else if (this.token[0] == 'DERIVATIVEMULT') {
+
+      let match = /d\^([0-9])([a-zA-Z])\s*\/\s*d([a-zA-Z])\^\1/.exec(this.token[1]);
+
+      result = ['derivative_leibniz_mult', parseFloat(match[1]), match[2], match[3]];
+      this.advance();
+      return result;
+      
     } else if (this.token[0] == 'VAR' || this.token[0] == 'VARMULTICHAR') {
       result = this.token[1];
 

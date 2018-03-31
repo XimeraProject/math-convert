@@ -176,8 +176,8 @@ const latex_rules = [
   ['\\\\Big\\s*\\|', '|'],
   ['\\\\bigg\\s*\\|', '|'],
   ['\\\\Bigg\\s*\\|', '|'],
-  ['\\{', '{'],
-  ['\\}', '}'],
+  ['{', '{'],
+  ['}', '}'],
   ['\\\\{', 'LBRACE'],
   ['\\\\left\\s*\\\\{', 'LBRACE'],
   ['\\\\bigl\\s*\\\\{', 'LBRACE'],
@@ -192,6 +192,11 @@ const latex_rules = [
   ['\\\\Biggr\\s*\\\\}', 'RBRACE'],
   ['\\\\cdot\\b', '*'],
   ['\\\\times\\b', '*'],
+
+
+  ['\\\\frac\\s*{\\s*d[a-zA-Z]\\s*}\\s*{\\s*d[a-zA-Z]\\s*}', 'DERIVATIVE'],
+  ['\\\\frac\\s*{\\s*d\\^([0-9])[a-zA-Z]\\s*}\\s*{\\s*d[a-zA-Z]\\^\\1\\s*}', 'DERIVATIVEMULT'],
+
   ['\\\\frac\\b', 'FRAC'],
   [',', ','],
 
@@ -256,11 +261,11 @@ const latex_rules = [
   
   ['\\\\\\\\', 'LINEBREAK'],
   
-  ['\\\\begin\\s*\{\\s*[a-zA-Z0-9]+\\s*\}', 'BEGINENVIRONMENT'],
+  ['\\\\begin\\s*{\\s*[a-zA-Z0-9]+\\s*}', 'BEGINENVIRONMENT'],
   
-  ['\\\\end\\s*\{\\s*[a-zA-Z0-9]+\\s*\}', 'ENDENVIRONMENT'],
+  ['\\\\end\\s*{\\s*[a-zA-Z0-9]+\\s*}', 'ENDENVIRONMENT'],
   
-  ['\\\\var\\s*\{\\s*[a-zA-Z0-9]+\\s*\}', 'VARMULTICHAR'],
+  ['\\\\var\\s*{\\s*[a-zA-Z0-9]+\\s*}', 'VARMULTICHAR'],
   
   ['\\\\[a-zA-Z][a-zA-Z0-9]*', 'LATEXCOMMAND'],
   ['[a-zA-Z]', 'VAR']
@@ -647,7 +652,7 @@ class latexToAst {
     }
 
     if(this.token[0] == 'BEGINENVIRONMENT') {
-      let environment = /\\begin\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token[1])[1];
+      let environment = /\\begin\s*{\s*([a-zA-Z0-9]+)\s*}/.exec(this.token[1])[1];
 
       if(['matrix', 'pmatrix', 'bmatrix'].includes(environment)) {
 	
@@ -702,7 +707,7 @@ class latexToAst {
 	}
 
 	// token is ENDENVIRONMENT
-	let environment2 = /\\end\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token[1])[1];
+	let environment2 = /\\end\s*{\s*([a-zA-Z0-9]+)\s*}/.exec(this.token[1])[1];
 	if(environment2 !== environment) {
 	  throw new ParseError("Expected \\end{" + environment + "}", this.lexer.location);
 	}
@@ -751,6 +756,22 @@ class latexToAst {
     } else if (this.token[0] == 'INFINITY') {
       result = 'infinity';
       this.advance();
+    } else if (this.token[0] == 'DERIVATIVE') {
+
+      let match = /\\frac\s*{\s*d([a-zA-Z])\s*}\s*{\s*d([a-zA-Z])\s*}/.exec(this.token[1]);
+
+      result = ['derivative_leibniz', match[1], match[2]];
+      this.advance();
+      return result;
+      
+    } else if (this.token[0] == 'DERIVATIVEMULT') {
+
+      let match = /\\frac\s*{\s*d\^([0-9])([a-zA-Z])\s*}\s*{\s*d([a-zA-Z])\^\1\s*}/.exec(this.token[1]);
+
+      result = ['derivative_leibniz_mult', parseFloat(match[1]), match[2], match[3]];
+      this.advance();
+      return result;
+      
     } else if (this.token[0] == 'SQRT') {
       this.advance();
 

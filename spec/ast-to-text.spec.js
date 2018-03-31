@@ -568,7 +568,16 @@ const objectsToTest = [
   {
     'ast': ['matrix', ['tuple', 2, 3], ['tuple', ['tuple', 8, 0, 0], ['tuple', 1, 2, 3]]],
     'text': '[ [ 8, 0, 0 ], [ 1, 2, 3 ] ]',
-  }
+  },
+  {
+    'ast': ['derivative_leibniz', 'x', 't'],
+    'text': 'dx/dt',
+  },
+  {
+    'ast': ['derivative_leibniz_mult', 2, 'x', 't'],
+    'text': 'd^2x/dt^2',
+  },
+
 ]
 
 

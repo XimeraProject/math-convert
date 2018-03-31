@@ -126,6 +126,11 @@ const operators = {
   "intersect": function(operands) {
     return operands.join(' \\cap ');
   },
+  "derivative_leibniz": function (operands) {
+    return "\\frac{d" + operands[0] + "}{d" + operands[1] + "}";
+  },
+  "derivative_leibniz_mult": function (operands) {
+    return "\\frac{d^" + operands[0] + operands[1]+ "}{d" + operands[2] + '^' + operands[0] + "}"; },
 };
 
 // defaults for parsers if not overridden by context
@@ -448,6 +453,9 @@ class astToLatex {
       return result;
       
     }
+    else if(operator == 'derivative_leibniz' || operator == 'derivative_leibniz_mult') {
+      return operators[operator]( operands );
+   }
     else if (operator == 'apply') {
 
       if (operands[0] === 'abs') {
