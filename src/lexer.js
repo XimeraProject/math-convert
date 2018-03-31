@@ -12,14 +12,14 @@
 
 
 class lexer {
-  constructor(token_rules, whitespace='\\s+') {
+  constructor(token_rules, whitespace='\\s') {
 
     this.input = '';
     this.location = 0;
     this.token_rules=[];
 
     // regular expression to identify whitespace at beginning
-    this.initial_whitespace = new RegExp('^' + whitespace);
+    this.initial_whitespace = new RegExp('^(' + whitespace + ')+');
     
     // convert first element of each rule to a regular expression that
     // starts at the beginning of the string
