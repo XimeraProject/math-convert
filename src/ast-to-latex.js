@@ -60,6 +60,9 @@ const operators = {
   "interval": function(operands) {
     return '\\left( ' + operands.join(', ') + ' \\right)';
   },
+  "matrix": function(operands) {
+    return '\\left( ' + operands.join(', ') + ' \\right)';
+  },
   "and": function(operands) {
     return operands.join(' \\land ');
   },
@@ -132,13 +135,16 @@ const operators = {
 // in addition to the below applied function symbols
 const allowedLatexSymbolsDefault = ['pi', 'theta', 'theta', 'Theta', 'alpha', 'nu', 'beta', 'xi', 'Xi', 'gamma', 'Gamma', 'delta', 'Delta', 'pi', 'Pi', 'epsilon', 'epsilon', 'rho', 'rho', 'zeta', 'sigma', 'Sigma', 'eta', 'tau', 'upsilon', 'Upsilon', 'iota', 'phi', 'phi', 'Phi', 'kappa', 'chi', 'lambda', 'Lambda', 'psi', 'Psi', 'omega', 'Omega', "abs", "exp", "log", "ln", "log10", "sign", "sqrt", "erf", "acos", "acosh", "acot", "acoth", "acsc", "acsch", "asec", "asech", "asin", "asinh", "atan", "atanh", "cos", "cosh", "cot", "coth", "csc", "csch", "sec", "sech", "sin", "sinh", "tan", "tanh", 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot', 'cosec', 'arg'];
 
+const matrixEnvironmentDefault = 'bmatrix';
 
 class astToLatex {
 
   constructor({
     allowedLatexSymbols=allowedLatexSymbolsDefault,
+    matrixEnvironment=matrixEnvironmentDefault,
   } = {}){
     this.allowedLatexSymbols = allowedLatexSymbols;
+    this.matrixEnvironment = matrixEnvironment;
   }
   
   convert(tree) {
@@ -421,6 +427,26 @@ class astToLatex {
 
       return result;
 
+    }
+    else if (operator == 'matrix') {
+      var size = operands[0];
+      var args = operands[1];
+
+      let result = '\\begin{' + this.matrixEnvironment + '} ';
+      
+      for(var row = 0; row < size[1]; row += 1) {
+	for(var col = 0; col < size[2]; col += 1) {
+	  result = result + this.statement(args[row+1][col+1]);
+	  if(col < size[2]-1)
+	    result = result + ' & ';
+	}
+	if(row < size[1]-1)
+	  result = result + ' \\\\ ';
+      }
+      result = result + ' \\end{' + this.matrixEnvironment + '}';
+      
+      return result;
+      
     }
     else if (operator == 'apply') {
 

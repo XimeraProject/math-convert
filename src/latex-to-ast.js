@@ -252,7 +252,14 @@ const latex_rules = [
   ['!', '!'],
   ['\'', '\''],
   ['_', '_'],
-
+  ['&', '&'],
+  
+  ['\\\\\\\\', 'LINEBREAK'],
+  
+  ['\\\\begin\\s*\{\\s*[a-zA-Z0-9]+\\s*\}', 'BEGINENVIRONMENT'],
+  
+  ['\\\\end\\s*\{\\s*[a-zA-Z0-9]+\\s*\}', 'ENDENVIRONMENT'],
+  
   ['\\\\var\\s*\{\\s*[a-zA-Z0-9]+\\s*\}', 'VARMULTICHAR'],
   
   ['\\\\[a-zA-Z][a-zA-Z0-9]*', 'LATEXCOMMAND'],
@@ -639,6 +646,105 @@ class latexToAst {
       return ['/', numerator, denominator];
     }
 
+    if(this.token[0] == 'BEGINENVIRONMENT') {
+      let environment = /\\begin\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token[1])[1];
+
+      if(['matrix', 'pmatrix', 'bmatrix'].includes(environment)) {
+	
+	let n_rows = 0;
+	let n_cols = 0;
+
+	let all_rows = [];
+	let row = [];
+	let n_this_row = 0;
+	let last_token = this.token[0];
+	
+	this.advance();
+
+	
+	while(this.token[0] !== 'ENDENVIRONMENT') {
+	  if(this.token[0] == '&') {
+	    if(last_token == '&' || last_token == 'LINEBREAK') {
+	      // blank entry, let entry be zero
+	      row.push(0);
+	      n_this_row += 1;
+	    }
+	    last_token = this.token[0];
+	    this.advance();
+	  }
+	  else if(this.token[0] == 'LINEBREAK') {
+	    if(last_token == '&' || last_token == 'LINEBREAK') {
+	      // blank entry, let entry be zero
+	      row.push(0);
+	      n_this_row += 1;
+	    }
+	    all_rows.push(row);
+	    if(n_this_row > n_cols)
+	      n_cols = n_this_row;
+
+	    n_rows += 1;
+	    n_this_row = 0;
+	    row = [];
+	    last_token = this.token[0];
+	    this.advance();
+	  }
+	  else {
+	    if(last_token == '&' || last_token == 'LINEBREAK' || 'BEGINENVIRONMENT') {
+	      row.push(this.statement());
+	      n_this_row += 1;
+	      last_token = ' ';
+
+	    }
+	    else {
+	      throw new ParseError("Invalid location of " + this.token[1], this.lexer.location);
+	    }
+	  }
+	}
+
+	// token is ENDENVIRONMENT
+	let environment2 = /\\end\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token[1])[1];
+	if(environment2 !== environment) {
+	  throw new ParseError("Expected \\end{" + environment + "}", this.lexer.location);
+	}
+
+	// add last row
+	if(last_token == '&') {
+	  // blank entry, let entry be zero
+	  row.push(0);
+	  n_this_row += 1;
+	}
+	all_rows.push(row);
+	if(n_this_row > n_cols)
+	  n_cols = n_this_row;
+	n_rows += 1;
+	
+
+	this.advance();
+	
+	// create matrix
+	result = ["matrix", ["tuple", n_rows, n_cols]];
+	let body = ["tuple"];
+	for(let r of all_rows) {
+	  let new_row = ["tuple"].concat(r);
+	  for(let i=r.length; i<n_cols; i+=1)
+	    new_row.push(0);
+
+	  body.push(new_row);
+
+	}
+	result.push(body);
+	
+	return result;
+      }
+      else {
+	throw new ParseError("Unrecognized environment " + environment, this.lexer.location);
+      }
+      
+    }
+    // else if(this.token[0] == 'ENDENVIRONMENT') {
+    //   throw new ParseError("Invalid location of " + this.token[1], this.lexer.location);
+    // }
+    
     if (this.token[0] == 'NUMBER') {
       result = parseFloat( this.token[1] );
       this.advance();

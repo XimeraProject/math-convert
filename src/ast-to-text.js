@@ -36,6 +36,7 @@ const unicode_operators = {
     "set": function(operands) { return '{ ' + operands.join( ', ' ) + ' }';},
     "vector": function(operands) { return '( ' + operands.join( ', ' ) + ' )';},
     "interval": function(operands) { return '( ' + operands.join( ', ' ) + ' )';},
+    "matrix": function(operands) { return '( ' + operands.join( ', ' ) + ' )';},
     "and": function(operands) { return operands.join( ' and ' );},
     "or": function(operands) { return operands.join( ' or ' );},
     "not": function(operands) { return 'not ' + operands[0]; },
@@ -74,6 +75,7 @@ const nonunicode_operators = {
     "set": function(operands) { return '{ ' + operands.join( ', ' ) + ' }';},
     "vector": function(operands) { return '( ' + operands.join( ', ' ) + ' )';},
     "interval": function(operands) { return '( ' + operands.join( ', ' ) + ' )';},
+    "matrix": function(operands) { return '( ' + operands.join( ', ' ) + ' )';},
     "and": function(operands) { return operands.join( ' and ' );},
     "or": function(operands) { return operands.join( ' or ' );},
     "not": function(operands) { return 'not ' + operands[0]; },
@@ -436,7 +438,31 @@ class astToText {
 	return result;
 
     }
-    else if(operator == 'apply'){
+   else if(operator == 'matrix') {
+     var size = operands[0];
+      var args = operands[1];
+
+     let result = '[ ';
+      
+     for(var row = 0; row < size[1]; row += 1) {
+       result = result + '[ '
+	for(var col = 0; col < size[2]; col += 1) {
+	  result = result + this.statement(args[row+1][col+1]);
+	  if(col < size[2]-1)
+	    result = result + ',';
+	  result = result + ' ';
+	}
+	result = result + ']';
+       	if(row < size[1]-1)
+	  result = result + ",";
+       result = result + ' ';
+      }
+     result = result + ']';
+      
+     return result;
+
+   }
+   else if(operator == 'apply'){
 
 	if(operands[0] === 'abs') {
 	    return '|' + this.statement(operands[1]) + '|';

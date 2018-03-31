@@ -3,7 +3,8 @@ import astToText from '../src/ast-to-text';
 var converter = new astToText();
 
 
-const objectsToTest = [{
+const objectsToTest = [
+  {
     'ast': ['*', ['/', 1, 2], 'x'],
     'text': '(1/2) x'
   },
@@ -57,10 +58,10 @@ const objectsToTest = [{
     'ast': ['^', 'x', ['apply', 'factorial', 'a']],
     'text': 'x^a!'
   },
-  // {
-  //   'ast': ['vector', 1, 2],
-  //   'latex': '( 1, 2 )'
-  // },
+  {
+    'ast': ['vector', 1, 2],
+    'text': '( 1, 2 )'
+  },
   {
     'ast': ['*', 'x', 'y', 'z'],
     'text': 'x y z'
@@ -556,6 +557,18 @@ const objectsToTest = [{
     'ast': '',
     'text': ''
   },
+  {
+    'ast':  ['matrix', ['tuple', 2, 2], ['tuple', ['tuple', 'a', 'b'], ['tuple', 'c', 'd']]],
+    'text': '[ [ a, b ], [ c, d ] ]',
+  },
+  {
+    'ast': ['matrix', ['tuple', 1, 2], ['tuple', ['tuple', ['+', 'a', ['*', 3, 'y']], ['*', 2, ['apply', 'sin', 'theta']]]]],
+    'text': '[ [ a + 3 y, 2 sin(θ) ] ]',
+  },
+  {
+    'ast': ['matrix', ['tuple', 2, 3], ['tuple', ['tuple', 8, 0, 0], ['tuple', 1, 2, 3]]],
+    'text': '[ [ 8, 0, 0 ], [ 1, 2, 3 ] ]',
+  }
 ]
 
 
@@ -565,9 +578,6 @@ for (let objectToTest of objectsToTest) {
   });
 
 }
-
-//console.log(converter.convert(['^', 'x', 2]));
-
 
 
 //

@@ -2,7 +2,8 @@ import astToLatex from '../src/ast-to-latex';
 
 var converter = new astToLatex();
 
-const objectsToTest = [{
+const objectsToTest = [
+  {
     'ast': ['*', ['/', 1, 2], 'x'],
     'latex': '\\left(\\frac{1}{2}\\right) \\, x'
   },
@@ -559,6 +560,19 @@ const objectsToTest = [{
     'ast': '',
     'latex': ''
   },
+  {
+    'ast':  ['matrix', ['tuple', 2, 2], ['tuple', ['tuple', 'a', 'b'], ['tuple', 'c', 'd']]],
+    'latex': '\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}'
+  },
+  {
+    'ast': ['matrix', ['tuple', 1, 2], ['tuple', ['tuple', ['+', 'a', ['*', 3, 'y']], ['*', 2, ['apply', 'sin', 'theta']]]]],
+    'latex': '\\begin{bmatrix} a + 3 \\, y & 2 \\, \\sin\\left(\\theta\\right) \\end{bmatrix}'
+  },
+  {
+    'ast': ['matrix', ['tuple', 2, 3], ['tuple', ['tuple', 8, 0, 0], ['tuple', 1, 2, 3]]],
+    'latex': '\\begin{bmatrix} 8 & 0 & 0 \\\\ 1 & 2 & 3 \\end{bmatrix}'
+  }
+
 ]
 
 
@@ -568,3 +582,12 @@ for (let objectToTest of objectsToTest) {
   });
 
 }
+
+
+test("matrix environment", function () {
+
+  let converter = new astToLatex({matrixEnvironment: "pmatrix" });
+
+  expect(converter.convert(['matrix', ['tuple', 2, 2], ['tuple', ['tuple', 'a', 'b'], ['tuple', 'c', 'd']]])).toEqual('\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}');
+  
+});

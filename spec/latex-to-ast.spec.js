@@ -146,6 +146,12 @@ var trees = {
   '\\infty': 'infinity',
   '+\\infty': 'infinity',
   'a b\\,c\\!d\\ e\\>f\\;g\\>h\\quad i \\qquad j': ['*','a','b','c','d','e','f','g','h','i','j'],
+  '\\begin{bmatrix}a & b\\\\ c&d\\end{bmatrix}': ['matrix', ['tuple', 2, 2], ['tuple', ['tuple', 'a', 'b'], ['tuple', 'c', 'd']]],
+  '\\begin{pmatrix}a & b\\\\ c\\end{pmatrix}': ['matrix', ['tuple', 2, 2], ['tuple', ['tuple', 'a', 'b'], ['tuple', 'c', 0]]],
+  '\\begin{matrix}a & b\\\\ &d\\end{matrix}': ['matrix', ['tuple', 2, 2], ['tuple', ['tuple', 'a', 'b'], ['tuple', 0, 'd']]],
+  '\\begin{pmatrix}a + 3y & 2\\sin(\\theta)\\end{pmatrix}': ['matrix', ['tuple', 1, 2], ['tuple', ['tuple', ['+', 'a', ['*', 3, 'y']], ['*', 2, ['apply', 'sin', 'theta']]]]],
+  '\\begin{bmatrix}3\\\\ \\\\ 4 & 5\\end{bmatrix}': ['matrix', ['tuple', 3, 2], ['tuple', ['tuple', 3, 0], ['tuple', 0, 0], ['tuple', 4, 5]]],
+  '\\begin{matrix}8\\\\1&2&3\\end{matrix}': ['matrix', ['tuple', 2, 3], ['tuple', ['tuple', 8, 0, 0], ['tuple', 1, 2, 3]]],
 };
 
 
