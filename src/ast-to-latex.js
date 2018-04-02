@@ -129,8 +129,9 @@ const operators = {
   "derivative_leibniz": function (operands) {
     return "\\frac{d" + operands[0] + "}{d" + operands[1] + "}";
   },
-  "derivative_leibniz_mult": function (operands) {
-    return "\\frac{d^" + operands[0] + operands[1]+ "}{d" + operands[2] + '^' + operands[0] + "}"; },
+  "partial_derivative_leibniz": function (operands) {
+    return "\\frac{d" + operands[0] + "}{d" + operands[1] + "}";
+  },
 };
 
 // defaults for parsers if not overridden by context
@@ -138,7 +139,7 @@ const operators = {
 
 // allowed multicharacter latex symbols
 // in addition to the below applied function symbols
-const allowedLatexSymbolsDefault = ['pi', 'theta', 'theta', 'Theta', 'alpha', 'nu', 'beta', 'xi', 'Xi', 'gamma', 'Gamma', 'delta', 'Delta', 'pi', 'Pi', 'epsilon', 'epsilon', 'rho', 'rho', 'zeta', 'sigma', 'Sigma', 'eta', 'tau', 'upsilon', 'Upsilon', 'iota', 'phi', 'phi', 'Phi', 'kappa', 'chi', 'lambda', 'Lambda', 'psi', 'Psi', 'omega', 'Omega', "abs", "exp", "log", "ln", "log10", "sign", "sqrt", "erf", "acos", "acosh", "acot", "acoth", "acsc", "acsch", "asec", "asech", "asin", "asinh", "atan", "atanh", "cos", "cosh", "cot", "coth", "csc", "csch", "sec", "sech", "sin", "sinh", "tan", "tanh", 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot', 'cosec', 'arg'];
+const allowedLatexSymbolsDefault = ['alpha', 'beta', 'gamma', 'Gamma', 'delta', 'Delta', 'epsilon', 'zeta', 'eta', 'theta', 'Theta', 'iota', 'kappa', 'lambda', 'Lambda', 'mu', 'nu', 'xi', 'Xi', 'pi', 'Pi', 'rho', 'sigma', 'Sigma', 'tau', 'Tau', 'upsilon', 'Upsilon', 'phi', 'Phi', 'chi', 'psi', 'Psi', 'omega', 'Omega', 'partial', "abs", "exp", "log", "ln", "log10", "sign", "sqrt", "erf", "acos", "acosh", "acot", "acoth", "acsc", "acsch", "asec", "asech", "asin", "asinh", "atan", "atanh", "cos", "cosh", "cot", "coth", "csc", "csch", "sec", "sech", "sin", "sinh", "tan", "tanh", 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot', 'cosec', 'arg'];
 
 const matrixEnvironmentDefault = 'bmatrix';
 
@@ -331,17 +332,21 @@ class astToLatex {
       return false
   }
 
+  stringConvert(string) {
+    if (string == "infinity")
+      return "\\infty";
+    if (string.length > 1) {
+      if(this.allowedLatexSymbols.includes(string))
+	return "\\" + string;
+      else
+	return "\\var{" + string + '}';
+    }
+    return string;
+  }
+
   factor(tree) {
     if (typeof tree === 'string') {
-      if (tree == "infinity")
-	return "\\infty";
-      if (tree.length > 1) {
-	if(this.allowedLatexSymbols.includes(tree))
-	  return "\\" + tree;
-	else
-	  return "\\var{" + tree + '}';
-      }
-      return tree;
+      return this.stringConvert(tree);
     }
 
     if (typeof tree === 'number') {
@@ -453,9 +458,61 @@ class astToLatex {
       return result;
       
     }
-    else if(operator == 'derivative_leibniz' || operator == 'derivative_leibniz_mult') {
-      return operators[operator]( operands );
-   }
+    else if(operator == 'derivative_leibniz' || operator == 'partial_derivative_leibniz') {
+      let deriv_symbol = "d";
+      if(operator == 'partial_derivative_leibniz')
+	deriv_symbol = "\\partial ";
+      
+      let num = operands[0];
+      let denom = operands[1];
+      
+      let n_deriv = 1;
+      let var1 = "";
+      if(Array.isArray(num)) {
+	var1 = num[1];
+	n_deriv = num[2];
+      }
+      else
+	var1 = num;
+      
+      let result = deriv_symbol;
+      if(n_deriv > 1)
+	result = result.trimRight() + "^{" + n_deriv + "}" + this.stringConvert(var1);
+      else {
+	result = result + this.stringConvert(var1);
+      }
+	  
+      result = "\\frac{ " +  result + " }{ ";
+
+      let n_denom = 1;
+      if(Array.isArray(denom)) {
+	n_denom = denom.length-1;
+      }
+      
+      for(let i=1; i <= n_denom; i++) {
+	let denom_part = denom[i];
+
+       let exponent = 1;
+	let var2 = "";
+	if(Array.isArray(denom_part)) {
+	  var2 = denom_part[1];
+	  exponent = denom_part[2];
+	}
+	else
+	  var2 = denom_part;
+
+	result = result + deriv_symbol + this.stringConvert(var2);
+	
+	if(exponent > 1)
+	  result = result + "^{" + exponent + "}";
+	
+	result = result + " ";
+
+      }
+      result = result + "}";
+      return result;
+      
+    }
     else if (operator == 'apply') {
 
       if (operands[0] === 'abs') {

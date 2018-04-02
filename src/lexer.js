@@ -36,24 +36,45 @@ class lexer {
     this.location = 0;
   }
   
-  advance() {
+  advance({remove_initial_space=true} = {}) {
     // Find next token at beginning of input and delete from input.
     // Update location to be the position in original input corresponding
     // to end of match.
     // Return token, which is an array of token type and matched string
 
+    let initial_space = "";
 
-    // first remove any initial whitespace and adjust location
     let result = this.initial_whitespace.exec(this.input);
     if(result) {
+      //first find any initial whitespace and adjust location
       let n_whitespace = result[0].length;
       this.input = this.input.slice(n_whitespace);
       this.location += n_whitespace;
+
+      // don't remove initial space, return it as next token
+      if(!remove_initial_space) {
+	return { 
+	  token_type: "SPACE",
+	  token_text: result[0],
+	  original_text: result[0],
+	  original_text_with_space: result[0],
+	  
+	}
+      }
+
+      // otherwise ignore initial space and continue
+      // except will prepend to original_text_with_space
+      initial_space = result[0];
     }
-    
+      
     // check for EOF
     if(this.input.length == 0) {
-      return ['EOF'];
+      return { 
+	token_type: "EOF",
+	token_text: "",
+	original_text: "",
+	original_text_with_space: initial_space,
+      }
     }
     
     // search through each token rule in order, finding first match
@@ -72,16 +93,29 @@ class lexer {
 
     // case that didn't find any matches
     if(result === null) {
-      return ['INVALID', this.input[0]];
+      return { 
+	token_type: "INVALID",
+	token_text: this.input[0],
+	original_text: this.input[0],
+	original_text_with_space: initial_space + this.input[0],
+      }
     }
 
     // found a match, set token
     if(rule.length > 2) {
       // overwrite text by third element of rule
-      return [rule[1], rule[2]];
+      return { token_type: rule[1],
+	       token_text: rule[2],
+	       original_text: result[0],
+	       original_text_with_space: initial_space + result[0],
+	     };
     }
     else {
-      return [rule[1], result[0]];
+      return { token_type: rule[1],
+	       token_text: result[0],
+	       original_text: result[0],
+	       original_text_with_space: initial_space + result[0],
+	     };
     }
   }
 

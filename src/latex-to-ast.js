@@ -2,6 +2,8 @@ import { ParseError } from './error';
 import lexer from './lexer';
 import flatten from './flatten';
 
+// UPDATETHIS: Delete or change to new license & package name
+
 /*
  * recursive descent parser for math expressions
  *
@@ -22,6 +24,8 @@ import flatten from './flatten';
  * See the GNU General Public License for more details.
  *
  */
+
+// UPDATETHIS: Is this grammar still correct?
 
 /* Grammar:
 
@@ -127,6 +131,7 @@ import flatten from './flatten';
 */
 
 
+// Some of the latex commands that lead to spacing
 const whitespace_rule = '\\s|\\\\,|\\\\!|\\\\ |\\\\>|\\\\;|\\\\:|\\\\quad\\b|\\\\qquad\\b';
 
 const latex_rules = [
@@ -192,11 +197,6 @@ const latex_rules = [
   ['\\\\Biggr\\s*\\\\}', 'RBRACE'],
   ['\\\\cdot\\b', '*'],
   ['\\\\times\\b', '*'],
-
-
-  ['\\\\frac\\s*{\\s*d[a-zA-Z]\\s*}\\s*{\\s*d[a-zA-Z]\\s*}', 'DERIVATIVE'],
-  ['\\\\frac\\s*{\\s*d\\^([0-9])[a-zA-Z]\\s*}\\s*{\\s*d[a-zA-Z]\\^\\1\\s*}', 'DERIVATIVEMULT'],
-
   ['\\\\frac\\b', 'FRAC'],
   [',', ','],
 
@@ -281,16 +281,19 @@ const allowSimplifiedFunctionApplicationDefault = true;
 
 // allowed multicharacter latex symbols
 // in addition to the below applied function symbols
-const allowedLatexSymbolsDefault = ['pi', 'theta', 'theta', 'Theta', 'alpha', 'nu', 'beta', 'xi', 'Xi', 'gamma', 'Gamma', 'delta', 'Delta', 'pi', 'Pi', 'epsilon', 'epsilon', 'rho', 'rho', 'zeta', 'sigma', 'Sigma', 'eta', 'tau', 'upsilon', 'Upsilon', 'iota', 'phi', 'phi', 'Phi', 'kappa', 'chi', 'lambda', 'Lambda', 'psi', 'Psi', 'omega', 'Omega'];
+const allowedLatexSymbolsDefault = ['alpha', 'beta', 'gamma', 'Gamma', 'delta', 'Delta', 'epsilon', 'zeta', 'eta', 'theta', 'Theta', 'iota', 'kappa', 'lambda', 'Lambda', 'mu', 'nu', 'xi', 'Xi', 'pi', 'Pi', 'rho', 'sigma', 'Sigma', 'tau', 'Tau', 'upsilon', 'Upsilon', 'phi', 'Phi', 'chi', 'psi', 'Psi', 'omega', 'Omega', 'partial'];
 
 // Applied functions must be given an argument so that
 // they are applied to the argument
-const appliedFunctionSymbolsDefault = [ "abs", "exp", "log", "ln", "log10", "sign", "sqrt", "erf", "acos", "acosh", "acot", "acoth", "acsc", "acsch", "asec", "asech", "asin", "asinh", "atan", "atanh", "cos", "cosh", "cot", "coth", "csc", "csch", "sec", "sech", "sin", "sinh", "tan", "tanh", 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot', 'cosec', 'arg'];
+const appliedFunctionSymbolsDefault = ["abs", "exp", "log", "ln", "log10", "sign", "sqrt", "erf", "acos", "acosh", "acot", "acoth", "acsc", "acsch", "asec", "asech", "asin", "asinh", "atan", "atanh", "cos", "cosh", "cot", "coth", "csc", "csch", "sec", "sech", "sin", "sinh", "tan", "tanh", 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot', 'cosec', 'arg'];
 
 // Functions could have an argument, in which case they are applied
 // or, if they don't have an argument in parentheses, then they are treated
 // like a variable, except that trailing ^ and ' have higher precedence
 const functionSymbolsDefault = ['f', 'g'];
+
+// Parse Leibniz notation
+const parseLeibnizNotationDefault = true;
 
 
 class latexToAst {
@@ -298,21 +301,23 @@ class latexToAst {
     allowSimplifiedFunctionApplication=allowSimplifiedFunctionApplicationDefault,
     allowedLatexSymbols=allowedLatexSymbolsDefault,
     appliedFunctionSymbols=appliedFunctionSymbolsDefault,
-    functionSymbols=functionSymbolsDefault
+    functionSymbols=functionSymbolsDefault,
+    parseLeibnizNotation = parseLeibnizNotationDefault,
   } = {}){
     this.allowSimplifiedFunctionApplication = allowSimplifiedFunctionApplication;
     this.allowedLatexSymbols = allowedLatexSymbols;
     this.appliedFunctionSymbols = appliedFunctionSymbols;
     this.functionSymbols = functionSymbols;
+    this.parseLeibnizNotation = parseLeibnizNotation;
 
     this.lexer = new lexer(latex_rules, whitespace_rule);
 
   }
 
-  advance() {
-    this.token = this.lexer.advance();
-    if (this.token[0] == 'INVALID') {
-      throw new ParseError("Invalid symbol '" + this.token[1] + "'",
+  advance(params) {
+    this.token = this.lexer.advance(params);
+    if (this.token.token_type == 'INVALID') {
+      throw new ParseError("Invalid symbol '" + this.token.original_text + "'",
 			   this.lexer.location);
     }
   }
@@ -324,8 +329,8 @@ class latexToAst {
 
     var result=this.statement_list();
 
-    if (this.token[0] != 'EOF') {
-      throw new ParseError("Invalid location of '" + this.token[1] + "'",
+    if (this.token.token_type != 'EOF') {
+      throw new ParseError("Invalid location of '" + this.token.original_text + "'",
 			   this.lexer.location);
     }
 
@@ -337,7 +342,7 @@ class latexToAst {
 
     var list = [this.statement()];
 
-    while(this.token[0] == ",") {
+    while(this.token.token_type == ",") {
       this.advance();
       list.push(this.statement());
     }
@@ -354,9 +359,9 @@ class latexToAst {
 
     var lhs=this.statement2();
 
-    while (this.token[0] == 'OR') {
+    while (this.token.token_type == 'OR') {
 
-      var operation = this.token[0].toLowerCase();
+      var operation = this.token.token_type.toLowerCase();
 
       this.advance();
 
@@ -373,9 +378,9 @@ class latexToAst {
 
     var lhs=this.relation();
 
-    while (this.token[0] == 'AND') {
+    while (this.token.token_type == 'AND') {
 
-      var operation = this.token[0].toLowerCase();
+      var operation = this.token.token_type.toLowerCase();
 
       this.advance();
 
@@ -390,29 +395,29 @@ class latexToAst {
 
   relation() {
 
-    if(this.token[0] == 'NOT' || this.token[0] == '!') {
+    if(this.token.token_type == 'NOT' || this.token.token_type == '!') {
       this.advance();
       return ['not', this.relation()];
     }
 
     var lhs = this.expression();
 
-    while ((this.token[0] == '=') || (this.token[0] == 'NE')
-	   || (this.token[0] == '<') || (this.token[0] == '>')
-	   || (this.token[0] == 'LE') || (this.token[0] == 'GE')
-	   || (this.token[0] == 'IN') || (this.token[0] == 'NOTIN')
-	   || (this.token[0] == 'NI') || (this.token[0] == 'NOTNI')
-	   || (this.token[0] == 'SUBSET') || (this.token[0] == 'NOTSUBSET')
-	   || (this.token[0] == 'SUPERSET') || (this.token[0] == 'NOTSUPERSET')) {
+    while ((this.token.token_type == '=') || (this.token.token_type == 'NE')
+	   || (this.token.token_type == '<') || (this.token.token_type == '>')
+	   || (this.token.token_type == 'LE') || (this.token.token_type == 'GE')
+	   || (this.token.token_type == 'IN') || (this.token.token_type == 'NOTIN')
+	   || (this.token.token_type == 'NI') || (this.token.token_type == 'NOTNI')
+	   || (this.token.token_type == 'SUBSET') || (this.token.token_type == 'NOTSUBSET')
+	   || (this.token.token_type == 'SUPERSET') || (this.token.token_type == 'NOTSUPERSET')) {
 
-      var operation = this.token[0].toLowerCase();
+      var operation = this.token.token_type.toLowerCase();
 
       var inequality_sequence=0;
 
-      if((this.token[0] == '<') || (this.token[0] == 'LE')) {
+      if((this.token.token_type == '<') || (this.token.token_type == 'LE')) {
 	inequality_sequence = -1;
       }
-      else if((this.token[0] == '>') || (this.token[0] == 'GE')) {
+      else if((this.token.token_type == '>') || (this.token.token_type == 'GE')) {
 	inequality_sequence = 1;
       }
 
@@ -420,7 +425,7 @@ class latexToAst {
       var rhs = this.expression();
 
       if(inequality_sequence == -1) {
-	if((this.token[0] == '<') || this.token[0] == 'LE') {
+	if((this.token.token_type == '<') || this.token.token_type == 'LE') {
 	  // sequence of multiple < or <=
 	  var strict = ['tuple'];
 	  if(operation == '<')
@@ -429,8 +434,8 @@ class latexToAst {
 	    strict.push(false)
 
 	  var args = ['tuple', lhs, rhs];
-	  while((this.token[0] == '<') || this.token[0] == 'LE') {
-	    if(this.token[0] == '<')
+	  while((this.token.token_type == '<') || this.token.token_type == 'LE') {
+	    if(this.token.token_type == '<')
 	      strict.push(true)
 	    else
 	      strict.push(false)
@@ -446,7 +451,7 @@ class latexToAst {
 
       }
       else if(inequality_sequence == 1) {
-	if((this.token[0] == '>') || this.token[0] == 'GE') {
+	if((this.token.token_type == '>') || this.token.token_type == 'GE') {
 	  // sequence of multiple > or >=
 	  var strict = ['tuple'];
 	  if(operation == '>')
@@ -455,8 +460,8 @@ class latexToAst {
 	    strict.push(false)
 
 	  var args = ['tuple', lhs, rhs];
-	  while((this.token[0] == '>') || this.token[0] == 'GE') {
-	    if(this.token[0] == '>')
+	  while((this.token.token_type == '>') || this.token.token_type == 'GE') {
+	    if(this.token.token_type == '>')
 	      strict.push(true)
 	    else
 	      strict.push(false)
@@ -475,7 +480,7 @@ class latexToAst {
 	lhs = ['=', lhs, rhs];
 
 	// check for sequence of multiple =
-	while(this.token[0] === '=') {
+	while(this.token.token_type === '=') {
 	  this.advance();
 	  lhs.push(this.expression());
 	}
@@ -492,18 +497,18 @@ class latexToAst {
 
 
   expression() {
-    if(this.token[0] == '+')
+    if(this.token.token_type == '+')
       this.advance();
 
     var lhs = this.term();
-    while ((this.token[0] == '+') || (this.token[0] == '-')
-	   || (this.token[0] == 'UNION')
-	   || (this.token[0] == 'INTERSECT')) {
+    while ((this.token.token_type == '+') || (this.token.token_type == '-')
+	   || (this.token.token_type == 'UNION')
+	   || (this.token.token_type == 'INTERSECT')) {
 
-      var operation = this.token[0].toLowerCase();
+      var operation = this.token.token_type.toLowerCase();
       var negative = false;
 
-      if (this.token[0] == '-') {
+      if (this.token.token_type == '-') {
 	operation = '+';
 	negative = true;
 	this.advance();
@@ -531,11 +536,11 @@ class latexToAst {
     do {
       keepGoing = false;
 
-      if (this.token[0] == '*') {
+      if (this.token.token_type == '*') {
 	this.advance();
 	lhs = ['*', lhs, this.factor()];
 	keepGoing = true;
-      } else if (this.token[0] == '/') {
+      } else if (this.token.token_type == '/') {
 	this.advance();
 	lhs = ['/', lhs, this.factor()];
 	keepGoing = true;
@@ -553,18 +558,18 @@ class latexToAst {
 
 
   factor() {
-    if (this.token[0] == '-') {
+    if (this.token.token_type == '-') {
       this.advance();
       return ['-', this.factor()];
     }
 
-    if (this.token[0] == '|') {
+    if (this.token.token_type == '|') {
       this.advance();
 
       var result = this.statement();
       result = ['apply', 'abs', result];
 
-      if (this.token[0] != '|') {
+      if (this.token.token_type != '|') {
 	throw new ParseError('Expected |', this.lexer.location);
       }
       this.advance();
@@ -574,11 +579,11 @@ class latexToAst {
     var result = this.nonMinusFactor();
 
     if(result === false) {
-      if (this.token[0] == "EOF") {
+      if (this.token.token_type == "EOF") {
 	throw new ParseError("Unexpected end of input", this.lexer.location);
       }
       else {
-	throw new ParseError("Invalid location of '" + this.token[1] + "'",
+	throw new ParseError("Invalid location of '" + this.token.original_text + "'",
 			     this.lexer.location);
       }
     }
@@ -593,12 +598,12 @@ class latexToAst {
     var result = this.baseFactor();
 
     // allow arbitrary sequence of factorials
-    if (this.token[0] == '!' || this.token[0] == "'") {
+    if (this.token.token_type == '!' || this.token.token_type == "'") {
       if(result === false)
-	throw new ParseError("Invalid location of " + this.token[0],
+	throw new ParseError("Invalid location of " + this.token.token_type,
 			     this.lexer.location);
-      while(this.token[0] == '!' || this.token[0] == "'") {
-	if(this.token[0] == '!')
+      while(this.token.token_type == '!' || this.token.token_type == "'") {
+	if(this.token.token_type == '!')
 	  result = ['apply', 'factorial', result]
 	else
 	  result = ['prime', result];
@@ -606,7 +611,7 @@ class latexToAst {
       }
     }
 
-    if (this.token[0] == '^') {
+    if (this.token.token_type == '^') {
       if(result === false) {
 	throw new ParseError("Invalid location of ^", this.lexer.location);
       }
@@ -621,29 +626,297 @@ class latexToAst {
   baseFactor() {
     var result = false;
 
-    if (this.token[0] == 'FRAC') {
+    if (this.token.token_type == 'FRAC') {
       this.advance();
 
-      if (this.token[0] != '{') {
+      if (this.token.token_type != '{') {
 	throw new ParseError("Expected {", this.lexer.location);
       }
       this.advance();
 
+      // determine if may be a derivative in Leibniz notation
+      if(this.parseLeibnizNotation) {
+	result = this.token.token_text;
+
+	let deriv_symbol = "";
+	let derivative_possible = true;
+	let token_list = [this.token.original_text_with_space];
+	
+	let n_deriv = 1;
+	
+	let var1 = "";
+	let var2s = [];
+	let var2_exponents = [];
+
+	if(this.token.token_type == "LATEXCOMMAND" && result.slice(1) == "partial")
+	  deriv_symbol = "∂";
+	else if(this.token.token_type == "VAR" && result=="d")
+	  deriv_symbol = "d";
+	else
+	  derivative_possible = false;
+
+	if(derivative_possible) {
+	  // since have just a d or ∂
+	  // one option is that have a ^ followed by an integer next possibly in {}
+	  
+	  this.advance();
+	  token_list.push(this.token.original_text_with_space);
+
+	  if(this.token.token_type === '^') {
+	    // so far have d or ∂ followed by ^
+	    // must be followed by an integer
+	    this.advance();
+	    token_list.push(this.token.original_text_with_space);
+
+	    let in_braces = false;
+	    if(this.token.token_type === '{') {
+	      in_braces = true;
+	      
+	      this.advance();
+	      token_list.push(this.token.original_text_with_space);
+	    }
+	    
+	    if(this.token.token_type != 'NUMBER') {
+	      derivative_possible = false;
+	    }
+	    else {
+	      n_deriv = parseFloat(this.token.token_text);
+	      if(!Number.isInteger(n_deriv)) {
+		derivative_possible = false;
+	      }
+	    }
+
+	    if(derivative_possible) {
+	      // found integer,
+
+	      // if in braces, require }
+	      if(in_braces) {
+		this.advance();
+		token_list.push(this.token.original_text_with_space);
+
+		if(this.token.token_type != '}') {
+		  derivative_possible = false;
+		}
+	      }
+	      
+	      this.advance();
+	      token_list.push(this.token.original_text_with_space);
+	    }
+	  }
+	}
+	
+	if(derivative_possible) {
+	  // since have a d or ∂, optionally followed by ^ and integer
+	  // next we must have:
+	  // a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
+	  
+	  if(this.token.token_type == 'VAR')
+	    var1 = this.token.token_text;
+	  else if(this.token.token_type == 'VARMULTICHAR') {
+	    // strip out name of variable from \var command
+	    var1 = /\\var\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token.token_text)[1];
+	  }
+	  else if(this.token.token_type == 'LATEXCOMMAND') {
+	    result = this.token.token_text.slice(1);
+	    if(this.allowedLatexSymbols.includes(result))
+	      var1 = result;
+	    else
+	      derivative_possible=false;
+	  }
+	}
+
+	if(derivative_possible) {
+	  // Finished numerator.
+	  // Next need a } and {
+
+      	  this.advance();
+	  token_list.push(this.token.original_text_with_space);
+	  
+	  if (this.token.token_type != '}') {
+	    derivative_possible = false;
+	  }
+	  else {
+	    this.advance();
+	    token_list.push(this.token.original_text_with_space);
+	    
+	    if (this.token.token_type != '{') {
+	      derivative_possible = false;
+	    }
+	    else {
+	      this.advance();
+	      token_list.push(this.token.original_text_with_space);
+	    }
+	  }
+	}
+
+	if(derivative_possible) {
+
+	  // In denominator now
+	  // find sequence of
+	  // derivative symbol followed by
+	  // - a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
+	  // optionally followed by a ^ and an integer
+	  // End when sum of exponents meets or exceeds n_deriv
+	  
+	  let exponent_sum = 0;
+
+	  while(true) {
+	      
+	    // next must be
+	    // - a VAR equal to deriv_symbol="d" or \partial when deriv_symbol = "∂"
+
+
+	    if(!((deriv_symbol == "d" && this.token.token_type == "VAR" && this.token.token_text=="d")
+		 || (deriv_symbol == "∂" && this.token.token_type == "LATEXCOMMAND"
+		     && this.token.token_text.slice(1) == "partial"))) {
+	      derivative_possible = false;
+	      break;
+	    }
+	    
+	    // followed by
+	    // - a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
+	    
+	    this.advance();
+	    token_list.push(this.token.original_text_with_space);
+
+	    if(this.token.token_type == 'VAR')
+	      var2s.push(this.token.token_text);
+	    else if(this.token.token_type == 'VARMULTICHAR') {
+	      // strip out name of variable from \var command
+	      var2s.push(/\\var\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token.token_text)[1]);
+	    }
+	    else if(this.token.token_type == 'LATEXCOMMAND') {
+	      let r = this.token.token_text.slice(1);
+	      if(this.allowedLatexSymbols.includes(r))
+		var2s.push(r);
+	      else {
+		derivative_possible = false;
+		break;
+	      }
+	    }
+	    else {
+	      derivative_possible = false;
+	      break;
+	    }
+	    // have derivative and variable, now check for optional ^ followed by number
+	    
+	    let this_exponent = 1;
+	    
+	    this.advance();
+	    token_list.push(this.token.original_text_with_space);
+	    
+	    if(this.token.token_type === '^') {
+	      
+	      this.advance();
+	      token_list.push(this.token.original_text_with_space);
+	      
+	      let in_braces = false;
+	      if(this.token.token_type === '{') {
+		in_braces = true;
+		
+		this.advance();
+		token_list.push(this.token.original_text_with_space);
+	      }
+	    
+	      if(this.token.token_type != 'NUMBER') {
+		derivative_possible = false;
+		break;
+	      }
+	      
+	      this_exponent = parseFloat(this.token.token_text);
+	      if(!Number.isInteger(this_exponent)) {
+		derivative_possible = false;
+		break;
+	      }
+	      
+	      // if in braces, require }
+	      if(in_braces) {
+		this.advance();
+		token_list.push(this.token.original_text_with_space);
+
+		if(this.token.token_type != '}') {
+		  derivative_possible = false;
+		  break;
+		}
+	      }
+	      
+	      this.advance();
+	      token_list.push(this.token.original_text_with_space);
+	      
+	    }
+
+	    var2_exponents.push(this_exponent);
+	    exponent_sum += this_exponent;
+	    
+	    if(exponent_sum > n_deriv) {
+	      derivative_possible= false;
+	      break;
+	    }
+
+	    // possibly found derivative
+	    if(exponent_sum == n_deriv) {
+
+	      // next token must be a }
+	      if(this.token.token_type !== '}') {
+		derivative_possible = false;
+		break;
+	      }
+	      
+	      // found derivative!
+
+	      this.advance();
+
+	      let result_name = "derivative_leibniz"
+	      if(deriv_symbol == "∂")
+		result_name = "partial_" + result_name;
+	      
+	      result = [result_name];
+	      
+	      if(n_deriv == 1)
+		result.push(var1);
+	      else
+		result.push(["tuple", var1, n_deriv]);
+
+	      let r2 = []
+	      for(let i=0; i<var2s.length; i+=1) {
+		if(var2_exponents[i] == 1)
+		  r2.push(var2s[i])
+		else
+		  r2.push(["tuple", var2s[i], var2_exponents[i]]);
+	      }
+	      r2 = ["tuple"].concat(r2);
+	      
+	      result.push(r2);
+	      
+	      return result;
+	      
+	    }
+	  }
+	}
+
+	// failed to get derivative, push back extra tokens on lexer
+	for(let token of token_list.reverse()) {
+	  this.lexer.unput(token);
+	}
+	this.advance();
+	
+      } // end of checking if Leibniz derivative
+	
       var numerator = this.statement();
 
-      if (this.token[0] != '}') {
+      if (this.token.token_type != '}') {
 	throw new ParseError("Expected }", this.lexer.location);
       }
       this.advance();
 
-      if (this.token[0] != '{') {
+      if (this.token.token_type != '{') {
 	throw new ParseError("Expected {", this.lexer.location);
       }
       this.advance();
 
       var denominator = this.statement();
 
-      if (this.token[0] != '}') {
+      if (this.token.token_type != '}') {
 	throw new ParseError("Expected }", this.lexer.location);
       }
       this.advance();
@@ -651,8 +924,8 @@ class latexToAst {
       return ['/', numerator, denominator];
     }
 
-    if(this.token[0] == 'BEGINENVIRONMENT') {
-      let environment = /\\begin\s*{\s*([a-zA-Z0-9]+)\s*}/.exec(this.token[1])[1];
+    if(this.token.token_type == 'BEGINENVIRONMENT') {
+      let environment = /\\begin\s*{\s*([a-zA-Z0-9]+)\s*}/.exec(this.token.token_text)[1];
 
       if(['matrix', 'pmatrix', 'bmatrix'].includes(environment)) {
 	
@@ -662,22 +935,22 @@ class latexToAst {
 	let all_rows = [];
 	let row = [];
 	let n_this_row = 0;
-	let last_token = this.token[0];
+	let last_token = this.token.token_type;
 	
 	this.advance();
 
 	
-	while(this.token[0] !== 'ENDENVIRONMENT') {
-	  if(this.token[0] == '&') {
+	while(this.token.token_type !== 'ENDENVIRONMENT') {
+	  if(this.token.token_type == '&') {
 	    if(last_token == '&' || last_token == 'LINEBREAK') {
 	      // blank entry, let entry be zero
 	      row.push(0);
 	      n_this_row += 1;
 	    }
-	    last_token = this.token[0];
+	    last_token = this.token.token_type;
 	    this.advance();
 	  }
-	  else if(this.token[0] == 'LINEBREAK') {
+	  else if(this.token.token_type == 'LINEBREAK') {
 	    if(last_token == '&' || last_token == 'LINEBREAK') {
 	      // blank entry, let entry be zero
 	      row.push(0);
@@ -690,7 +963,7 @@ class latexToAst {
 	    n_rows += 1;
 	    n_this_row = 0;
 	    row = [];
-	    last_token = this.token[0];
+	    last_token = this.token.token_type;
 	    this.advance();
 	  }
 	  else {
@@ -701,13 +974,13 @@ class latexToAst {
 
 	    }
 	    else {
-	      throw new ParseError("Invalid location of " + this.token[1], this.lexer.location);
+	      throw new ParseError("Invalid location of " + this.token.original_text, this.lexer.location);
 	    }
 	  }
 	}
 
 	// token is ENDENVIRONMENT
-	let environment2 = /\\end\s*{\s*([a-zA-Z0-9]+)\s*}/.exec(this.token[1])[1];
+	let environment2 = /\\end\s*{\s*([a-zA-Z0-9]+)\s*}/.exec(this.token.token_text)[1];
 	if(environment2 !== environment) {
 	  throw new ParseError("Expected \\end{" + environment + "}", this.lexer.location);
 	}
@@ -746,40 +1019,21 @@ class latexToAst {
       }
       
     }
-    // else if(this.token[0] == 'ENDENVIRONMENT') {
-    //   throw new ParseError("Invalid location of " + this.token[1], this.lexer.location);
-    // }
     
-    if (this.token[0] == 'NUMBER') {
-      result = parseFloat( this.token[1] );
+    if (this.token.token_type == 'NUMBER') {
+      result = parseFloat( this.token.token_text );
       this.advance();
-    } else if (this.token[0] == 'INFINITY') {
+    } else if (this.token.token_type == 'INFINITY') {
       result = 'infinity';
       this.advance();
-    } else if (this.token[0] == 'DERIVATIVE') {
-
-      let match = /\\frac\s*{\s*d([a-zA-Z])\s*}\s*{\s*d([a-zA-Z])\s*}/.exec(this.token[1]);
-
-      result = ['derivative_leibniz', match[1], match[2]];
-      this.advance();
-      return result;
-      
-    } else if (this.token[0] == 'DERIVATIVEMULT') {
-
-      let match = /\\frac\s*{\s*d\^([0-9])([a-zA-Z])\s*}\s*{\s*d([a-zA-Z])\^\1\s*}/.exec(this.token[1]);
-
-      result = ['derivative_leibniz_mult', parseFloat(match[1]), match[2], match[3]];
-      this.advance();
-      return result;
-      
-    } else if (this.token[0] == 'SQRT') {
+    } else if (this.token.token_type == 'SQRT') {
       this.advance();
 
       var root = 2;
-      if (this.token[0] == '[') {
+      if (this.token.token_type == '[') {
 	this.advance();
 	var parameter = this.statement();
-	if (this.token[0] != ']') {
+	if (this.token.token_type != ']') {
 	  throw new ParseError("Expected ]", this.lexer.location);
 	}
 	this.advance();
@@ -787,13 +1041,13 @@ class latexToAst {
 	root = parameter;
       }
 
-      if (this.token[0] != '{') {
+      if (this.token.token_type != '{') {
 	throw new ParseError("Expected {", this.lexer.location);
       }
 
       this.advance();
       var parameter = this.statement();
-      if (this.token[0] != '}') {
+      if (this.token.token_type != '}') {
 	throw new ParseError("Expected }", this.lexer.location);
       }
       this.advance();
@@ -802,21 +1056,21 @@ class latexToAst {
 	result = ['apply', 'sqrt', parameter];
       else
 	result = ['^', parameter, ['/', 1, root]];
-    } else if (this.token[0] == 'VAR' || this.token[0] == 'LATEXCOMMAND'
-	      || this.token[0] == 'VARMULTICHAR') {
-      result = this.token[1];
+    } else if (this.token.token_type == 'VAR' || this.token.token_type == 'LATEXCOMMAND'
+	      || this.token.token_type == 'VARMULTICHAR') {
+      result = this.token.token_text;
 
-      if(this.token[0] == 'LATEXCOMMAND') {
+      if(this.token.token_type == 'LATEXCOMMAND') {
 	result=result.slice(1); 
 	if(!(this.appliedFunctionSymbols.includes(result)
 	     || this.functionSymbols.includes(result)
 	     || this.allowedLatexSymbols.includes(result)
 	    )) {
-	  throw new ParseError("Unrecognized latex command " + this.token[1],
+	  throw new ParseError("Unrecognized latex command " + this.token.original_text,
 			       this.lexer.location);
 	}
       }
-      else if(this.token[0] == 'VARMULTICHAR') {
+      else if(this.token.token_type == 'VARMULTICHAR') {
 	// strip out name of variable from \var command
 	result = /\\var\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(result)[1];
       }
@@ -830,18 +1084,18 @@ class latexToAst {
 	result = result.toLowerCase();
 	this.advance();
 
-	if(this.token[0]=='_') {
+	if(this.token.token_type=='_') {
 	  this.advance();
 	  var subresult =  this.baseFactor();
 
 	  // since baseFactor could return false, must check
 	  if(subresult === false) {
-	    if (this.token[0] == "EOF") {
+	    if (this.token.token_type == "EOF") {
 	      throw new ParseError("Unexpected end of input",
 				   this.lexer.location);
 	    }
 	    else {
-	      throw new ParseError("Invalid location of '" + this.token[1]
+	      throw new ParseError("Invalid location of '" + this.token.original_text
 				   + "'", this.lexer.location) ;
 	    }
 	  }
@@ -849,20 +1103,20 @@ class latexToAst {
 	}
 
 	var n_primes=0;
-	while(this.token[0] == "'") {
+	while(this.token.token_type == "'") {
 	  n_primes += 1;
 	  result = ['prime', result];
 	  this.advance();
 	}
 
-	if(this.token[0]=='^') {
+	if(this.token.token_type=='^') {
 	  this.advance();
 	  result = ['^', result, this.factor()];
 	}
 
-	if (this.token[0] == '{' || this.token[0] == '(') {
+	if (this.token.token_type == '{' || this.token.token_type == '(') {
 	  var expected_right;
-	  if(this.token[0] == '{')
+	  if(this.token.token_type == '{')
 	    expected_right = '}';
 	  else
 	    expected_right = ')';
@@ -870,7 +1124,7 @@ class latexToAst {
 	  this.advance();
 	  var parameters = this.statement_list();
 
-	  if (this.token[0] != expected_right) {
+	  if (this.token.token_type != expected_right) {
 	    throw new ParseError('Expected ' + expected_right,
 				 this.lexer.location);
 	  }
@@ -901,20 +1155,20 @@ class latexToAst {
       else {
 	this.advance();
       }
-    } else if (this.token[0] == '(' || this.token[0] == '['
-	       || this.token[0] == '{'
-	       || this.token[0] == 'LBRACE') {
-      var token_left = this.token[0];
+    } else if (this.token.token_type == '(' || this.token.token_type == '['
+	       || this.token.token_type == '{'
+	       || this.token.token_type == 'LBRACE') {
+      var token_left = this.token.token_type;
       var expected_right, other_right;
-      if(this.token[0] == '(') {
+      if(this.token.token_type == '(') {
 	expected_right = ')';
 	other_right = ']';
       }
-      else if(this.token[0] == '[') {
+      else if(this.token.token_type == '[') {
 	expected_right = ']';
 	other_right = ')';
       }
-      else if(this.token[0] == '{') {
+      else if(this.token.token_type == '{') {
 	expected_right = '}';
 	other_right = null;
       }
@@ -931,12 +1185,12 @@ class latexToAst {
 	n_elements = result.length-1;
       }
 
-      if (this.token[0] != expected_right) {
+      if (this.token.token_type != expected_right) {
 	if(n_elements != 2 || other_right === null) {
 	  throw new ParseError('Expected ' + expected_right,
 			       this.lexer.location);
 	}
-	else if (this.token[0] != other_right) {
+	else if (this.token.token_type != other_right) {
 	  throw new ParseError('Expected ) or ]', this.lexer.location);
 	}
 
@@ -970,7 +1224,7 @@ class latexToAst {
       this.advance();
     }
 
-    if (this.token[0] == '_') {
+    if (this.token.token_type == '_') {
       if(result === false) {
 	throw new ParseError("Invalid location of _", this.lexer.location);
       }
@@ -978,11 +1232,11 @@ class latexToAst {
       var subresult =  this.baseFactor();
 
       if(subresult === false) {
-	if (this.token[0] == "EOF") {
+	if (this.token.token_type == "EOF") {
 	  throw new ParseError("Unexpected end of input", this.lexer.location);
 	}
 	else {
-	  throw new ParseError("Invalid location of '" + this.token[1] + "'",
+	  throw new ParseError("Invalid location of '" + this.token.original_text + "'",
 			       this.lexer.location);
 	}
       }

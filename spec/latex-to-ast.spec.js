@@ -152,12 +152,47 @@ var trees = {
   '\\begin{pmatrix}a + 3y & 2\\sin(\\theta)\\end{pmatrix}': ['matrix', ['tuple', 1, 2], ['tuple', ['tuple', ['+', 'a', ['*', 3, 'y']], ['*', 2, ['apply', 'sin', 'theta']]]]],
   '\\begin{bmatrix}3\\\\ \\\\ 4 & 5\\end{bmatrix}': ['matrix', ['tuple', 3, 2], ['tuple', ['tuple', 3, 0], ['tuple', 0, 0], ['tuple', 4, 5]]],
   '\\begin{matrix}8\\\\1&2&3\\end{matrix}': ['matrix', ['tuple', 2, 3], ['tuple', ['tuple', 8, 0, 0], ['tuple', 1, 2, 3]]],
-  '\\frac{dx}{dt}': ['derivative_leibniz', 'x', 't'],
-  '\\frac { dx } { dt }': ['derivative_leibniz', 'x', 't'],
-  '\\frac{d x}{d t}': ["/", ["*", "d", "x"], ["*", "d", "t"]],
+  '\\frac{dx}{dt}=q': ['=', ['derivative_leibniz', 'x', ['tuple', 't']], 'q'],
+  '\\frac { dx } { dt } = q': ['=', ['derivative_leibniz', 'x', ['tuple', 't']], 'q'],
+  '\\frac{d x}{dt}': ['derivative_leibniz', 'x', ['tuple', 't']],
+  '\\frac{dx}{d t}': ['derivative_leibniz', 'x', ['tuple', 't']],
   '\\frac{dx_2}{dt}': ["/", ["*", "d", ["_", "x", 2]], ["*", "d", "t"]],
-  '\\frac{d^2x}{dt^2}': ['derivative_leibniz_mult', 2, 'x', 't'],
+  '\\frac{dxy}{dt}': ["/", ["*", "d", "x", "y"], ["*", "d", "t"]],
+  '\\frac{d^2x}{dt^2}': ['derivative_leibniz', ['tuple', 'x', 2], ['tuple', ['tuple', 't', 2]]],
+  '\\frac{d^{2}x}{dt^{ 2 }}': ['derivative_leibniz', ['tuple', 'x', 2], ['tuple', ['tuple', 't', 2]]],
   '\\frac{d^2x}{dt^3}': ["/", ["*", ["^", "d", 2], "x"], ["*", "d", ["^", "t", 3]]],
+  '\\frac{d^2x}{dsdt}': ['derivative_leibniz', ['tuple', 'x', 2], ['tuple', 's', 't']],
+  '\\frac{d^2x}{dsdta}': ["/", ["*", ["^", "d", 2], "x"], ["*", "d", "s", "d", "t", "a"]],
+  '\\frac{d^3x}{ds^2dt}': ['derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], 't']],
+  '\\frac{d^{ 3 }x}{ds^{2}dt}': ['derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], 't']],
+  '\\frac{d^3x}{dsdt^2}': ['derivative_leibniz', ['tuple', 'x', 3], ['tuple', 's', ['tuple', 't', 2]]],
+  '\\frac{d^{3}x}{dsdt^{ 2 }}': ['derivative_leibniz', ['tuple', 'x', 3], ['tuple', 's', ['tuple', 't', 2]]],
+  '\\frac{d\\theta}{d\\pi}': ['derivative_leibniz', 'theta', ['tuple', 'pi']],
+  '\\frac{d\\var{hello}}{d\\var{bye}}': ['derivative_leibniz', 'hello', ['tuple', 'bye']],
+  '\\frac{d^2\\theta}{d\\pi^2}': ['derivative_leibniz', ['tuple', 'theta', 2], ['tuple', ['tuple', 'pi', 2]]],
+  '\\frac{d^2\\var{hello}}{d\\var{bye}^2}': ['derivative_leibniz', ['tuple', 'hello', 2], ['tuple', ['tuple', 'bye', 2]]],
+  '\\frac{d^{2}\\theta}{d\\pi^{ 2 }}': ['derivative_leibniz', ['tuple', 'theta', 2], ['tuple', ['tuple', 'pi', 2]]],
+  '\\frac{d^{ 2 }\\var{hello}}{d\\var{bye}^{2}}': ['derivative_leibniz', ['tuple', 'hello', 2], ['tuple', ['tuple', 'bye', 2]]],
+  '\\frac{\\partial x}{\\partial t}': ['partial_derivative_leibniz', 'x', ['tuple', 't']],
+  '\\frac { \\partial x } { \\partial t } = q': ['=', ['partial_derivative_leibniz', 'x', ['tuple', 't']], 'q'],
+  '\\frac{\\partial x_2}{\\partial t}': ["/", ["*", "partial", ["_", "x", 2]], ["*", "partial", "t"]],
+  '\\frac{\\partial xy}{\\partial t}': ["/", ["*", "partial", "x", "y"], ["*", "partial", "t"]],
+  '\\frac{\\partial^2x}{\\partial t^2}': ['partial_derivative_leibniz', ['tuple', 'x', 2], ['tuple', ['tuple', 't', 2]]],
+  '\\frac{\\partial^{2}x}{\\partial t^{ 2 }}': ['partial_derivative_leibniz', ['tuple', 'x', 2], ['tuple', ['tuple', 't', 2]]],
+  '\\frac{\\partial ^2x}{\\partial t^3}': ["/", ["*", ["^", "partial", 2], "x"], ["*", "partial", ["^", "t", 3]]],
+  '\\frac{\\partial ^2x}{\\partial s\\partial t}': ['partial_derivative_leibniz', ['tuple', 'x', 2], ['tuple', 's', 't']],
+  '\\frac{\\partial ^2x}{\\partial s\\partial ta}': ["/", ["*", ["^", "partial", 2], "x"], ["*", "partial", "s", "partial", "t", "a"]],
+  '\\frac{\\partial ^3x}{\\partial s^2\\partial t}': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], 't']],
+  '\\frac{\\partial ^{ 3 }x}{\\partial s^{2}\\partial t}': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], 't']],
+  '\\frac{\\partial ^3x}{\\partial s\\partial t^2}': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', 's', ['tuple', 't', 2]]],
+  '\\frac{\\partial ^{3}x}{\\partial s\\partial t^{ 2 }}': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', 's', ['tuple', 't', 2]]],
+  '\\frac{\\partial \\theta}{\\partial \\pi}': ['partial_derivative_leibniz', 'theta', ['tuple', 'pi']],
+  '\\frac{\\partial \\var{hello}}{\\partial \\var{bye}}': ['partial_derivative_leibniz', 'hello', ['tuple', 'bye']],
+  '\\frac{\\partial ^2\\theta}{\\partial \\pi^2}': ['partial_derivative_leibniz', ['tuple', 'theta', 2], ['tuple', ['tuple', 'pi', 2]]],
+  '\\frac{\\partial ^2\\var{hello}}{\\partial \\var{bye}^2}': ['partial_derivative_leibniz', ['tuple', 'hello', 2], ['tuple', ['tuple', 'bye', 2]]],
+  '\\frac{\\partial ^{2}\\theta}{\\partial \\pi^{ 2 }}': ['partial_derivative_leibniz', ['tuple', 'theta', 2], ['tuple', ['tuple', 'pi', 2]]],
+  '\\frac{\\partial ^{ 2 }\\var{hello}}{\\partial \\var{bye}^{2}}': ['partial_derivative_leibniz', ['tuple', 'hello', 2], ['tuple', ['tuple', 'bye', 2]]],
+  
 };
 
 
@@ -256,4 +291,20 @@ test("allow simplified function application", function () {
   expect(converter.convert('\\sin x')).toEqual(
     ['apply', 'sin', 'x']);
   
+});
+
+test("parse Leibniz notation", function () {
+
+  let converter = new latexToAst();
+  expect(converter.convert('\\frac{dy}{dx}')).toEqual(
+    ['derivative_leibniz', 'y', ['tuple', 'x']]);
+  
+  converter = new latexToAst({parseLeibnizNotation: false});
+  expect(converter.convert('\\frac{dy}{dx}')).toEqual(
+    ['/', ['*', 'd', 'y'], ['*', 'd', 'x']]);
+  
+  converter = new latexToAst({parseLeibnizNotation: true});
+  expect(converter.convert('\\frac{dy}{dx}')).toEqual(
+    ['derivative_leibniz', 'y', ['tuple', 'x']]);
+
 });

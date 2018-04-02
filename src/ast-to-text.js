@@ -20,8 +20,6 @@
  */
 
 
-
-
 const unicode_operators = {
     "+": function(operands) { return operands.join( ' ' ); },
     "-": function(operands) { return "- " + operands[0]; },
@@ -60,7 +58,7 @@ const unicode_operators = {
     "union": function (operands) { return operands.join(' ∪ '); },
     "intersect": function (operands) { return operands.join(' ∩ '); },
     "derivative_leibniz": function (operands) { return "d" + operands[0] + "/d" + operands[1]; },
-    "derivative_leibniz_mult": function (operands) { return "d^" + operands[0] + operands[1]+ "/d" + operands[2] + '^' + operands[0]; },
+    "partial_derivative_leibniz": function (operands) { return "∂" + operands[0] + "/∂" + operands[1]; },
   
 };
 
@@ -102,7 +100,7 @@ const nonunicode_operators = {
     "union": function (operands) { return operands.join(' union '); },
     "intersect": function (operands) { return operands.join(' intersect '); },
     "derivative_leibniz": function (operands) { return "d" + operands[0] + "/d" + operands[1]; },
-    "derivative_leibniz_mult": function (operands) { return "d^" + operands[0] + operands[1]+ "/d" + operands[2] + '^' + operands[0]; },
+    "partial_derivative_leibniz": function (operands) { return "∂" + operands[0] + "/∂" + operands[1]; },
 };
 
 
@@ -467,8 +465,53 @@ class astToText {
      return result;
 
    }
-   else if(operator == 'derivative_leibniz' || operator == 'derivative_leibniz_mult') {
-     return this.operators[operator]( operands );
+   else if(operator == 'derivative_leibniz' || operator == 'partial_derivative_leibniz') {
+     let deriv_symbol = "d";
+     if(operator == 'partial_derivative_leibniz')
+       deriv_symbol = "∂";
+
+     let num = operands[0];
+     let denom = operands[1];
+
+     let n_deriv = 1;
+     let var1 = "";
+     if(Array.isArray(num)) {
+       var1 = num[1];
+       n_deriv = num[2];
+     }
+     else
+       var1 = num;
+
+     let result = deriv_symbol;
+     if(n_deriv > 1)
+       result = result + "^" + n_deriv;
+     result = result + this.symbolConvert(var1) + "/";
+
+     let n_denom = 1;
+     if(Array.isArray(denom)) {
+       n_denom = denom.length-1;
+     }
+
+     for(let i=1; i <= n_denom; i++) {
+       let denom_part = denom[i];
+
+       let exponent = 1;
+       let var2 = "";
+       if(Array.isArray(denom_part)) {
+	 var2 = denom_part[1];
+	 exponent = denom_part[2];
+       }
+       else
+	 var2 = denom_part;
+       
+       result = result + deriv_symbol + this.symbolConvert(var2);
+
+       if(exponent > 1)
+	 result = result + "^" + exponent;
+
+     }
+     return result;
+       
    }
    else if(operator == 'apply'){
 
