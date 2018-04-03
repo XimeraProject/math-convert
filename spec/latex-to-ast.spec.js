@@ -192,6 +192,10 @@ var trees = {
   '\\frac{\\partial ^2\\var{hello}}{\\partial \\var{bye}^2}': ['partial_derivative_leibniz', ['tuple', 'hello', 2], ['tuple', ['tuple', 'bye', 2]]],
   '\\frac{\\partial ^{2}\\theta}{\\partial \\pi^{ 2 }}': ['partial_derivative_leibniz', ['tuple', 'theta', 2], ['tuple', ['tuple', 'pi', 2]]],
   '\\frac{\\partial ^{ 2 }\\var{hello}}{\\partial \\var{bye}^{2}}': ['partial_derivative_leibniz', ['tuple', 'hello', 2], ['tuple', ['tuple', 'bye', 2]]],
+  '2 \\cdot 3': ['*', 2, 3],
+  '2\\cdot3': ['*', 2, 3],
+  '2 \\times 3': ['*', 2, 3],
+  '2\\times3': ['*', 2, 3],
   
 };
 

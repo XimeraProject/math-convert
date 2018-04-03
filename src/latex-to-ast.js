@@ -195,64 +195,64 @@ const latex_rules = [
   ['\\\\Bigr\\s*\\\\}', 'RBRACE'],
   ['\\\\biggr\\s*\\\\}', 'RBRACE'],
   ['\\\\Biggr\\s*\\\\}', 'RBRACE'],
-  ['\\\\cdot\\b', '*'],
-  ['\\\\times\\b', '*'],
-  ['\\\\frac\\b', 'FRAC'],
+  ['\\\\cdot(?![a-zA-Z])', '*'],
+  ['\\\\times(?![a-zA-Z])', '*'],
+  ['\\\\frac(?![a-zA-Z])', 'FRAC'],
   [',', ','],
 
-  ['\\\\vartheta\\b', 'LATEXCOMMAND', '\\theta'],
-  ['\\\\varepsilon\\b', 'LATEXCOMMAND', '\\epsilon'],
-  ['\\\\varrho\\b', 'LATEXCOMMAND', '\\rho'],
-  ['\\\\varphi\\b', 'LATEXCOMMAND', '\\phi'],
+  ['\\\\vartheta(?![a-zA-Z])', 'LATEXCOMMAND', '\\theta'],
+  ['\\\\varepsilon(?![a-zA-Z])', 'LATEXCOMMAND', '\\epsilon'],
+  ['\\\\varrho(?![a-zA-Z])', 'LATEXCOMMAND', '\\rho'],
+  ['\\\\varphi(?![a-zA-Z])', 'LATEXCOMMAND', '\\phi'],
 
-  ['\\\\infty\\b', 'INFINITY'],
+  ['\\\\infty(?![a-zA-Z])', 'INFINITY'],
 
-  ['\\\\asin\\b', 'LATEXCOMMAND', '\\arcsin'],
-  ['\\\\acos\\b', 'LATEXCOMMAND', '\\arccos'],
-  ['\\\\atan\\b', 'LATEXCOMMAND', '\\arctan'],
-  ['\\\\sqrt\\b', 'SQRT'],
+  ['\\\\asin(?![a-zA-Z])', 'LATEXCOMMAND', '\\arcsin'],
+  ['\\\\acos(?![a-zA-Z])', 'LATEXCOMMAND', '\\arccos'],
+  ['\\\\atan(?![a-zA-Z])', 'LATEXCOMMAND', '\\arctan'],
+  ['\\\\sqrt(?![a-zA-Z])', 'SQRT'],
 
-  ['\\\\land\\b', 'AND'],
-  ['\\\\wedge\\b', 'AND'],
+  ['\\\\land(?![a-zA-Z])', 'AND'],
+  ['\\\\wedge(?![a-zA-Z])', 'AND'],
 
-  ['\\\\lor\\b', 'OR'],
-  ['\\\\vee\\b', 'OR'],
+  ['\\\\lor(?![a-zA-Z])', 'OR'],
+  ['\\\\vee(?![a-zA-Z])', 'OR'],
 
-  ['\\\\lnot\\b', 'NOT'],
+  ['\\\\lnot(?![a-zA-Z])', 'NOT'],
 
   ['=', '='],
-  ['\\\\neq\\b', 'NE'],
-  ['\\\\ne\\b', 'NE'],
+  ['\\\\neq(?![a-zA-Z])', 'NE'],
+  ['\\\\ne(?![a-zA-Z])', 'NE'],
   ['\\\\not\\s*=', 'NE'],
-  ['\\\\leq\\b', 'LE'],
-  ['\\\\le\\b', 'LE'],
-  ['\\\\geq\\b', 'GE'],
-  ['\\\\ge\\b', 'GE'],
+  ['\\\\leq(?![a-zA-Z])', 'LE'],
+  ['\\\\le(?![a-zA-Z])', 'LE'],
+  ['\\\\geq(?![a-zA-Z])', 'GE'],
+  ['\\\\ge(?![a-zA-Z])', 'GE'],
   ['<', '<'],
-  ['\\\\lt\\b', '<'],
+  ['\\\\lt(?![a-zA-Z])', '<'],
   ['>', '>'],
-  ['\\\\gt\\b', '>'],
+  ['\\\\gt(?![a-zA-Z])', '>'],
 
-  ['\\\\in\\b', 'IN'],
+  ['\\\\in(?![a-zA-Z])', 'IN'],
 
-  ['\\\\notin\\b', 'NOTIN'],
-  ['\\\\not\\s*\\\\in\\b', 'NOTIN'],
+  ['\\\\notin(?![a-zA-Z])', 'NOTIN'],
+  ['\\\\not\\s*\\\\in(?![a-zA-Z])', 'NOTIN'],
 
-  ['\\\\ni\\b', 'NI'],
+  ['\\\\ni(?![a-zA-Z])', 'NI'],
 
-  ['\\\\not\\s*\\\\ni\\b', 'NOTNI'],
+  ['\\\\not\\s*\\\\ni(?![a-zA-Z])', 'NOTNI'],
 
-  ['\\\\subset\\b', 'SUBSET'],
+  ['\\\\subset(?![a-zA-Z])', 'SUBSET'],
 
-  ['\\\\not\\s*\\\\subset\\b', 'NOTSUBSET'],
+  ['\\\\not\\s*\\\\subset(?![a-zA-Z])', 'NOTSUBSET'],
 
-  ['\\\\supset\\b', 'SUPERSET'],
+  ['\\\\supset(?![a-zA-Z])', 'SUPERSET'],
 
-  ['\\\\not\\s*\\\\supset\\b', 'NOTSUPERSET'],
+  ['\\\\not\\s*\\\\supset(?![a-zA-Z])', 'NOTSUPERSET'],
 
-  ['\\\\cup\\b', 'UNION'],
+  ['\\\\cup(?![a-zA-Z])', 'UNION'],
 
-  ['\\\\cap\\b', 'INTERSECT'],
+  ['\\\\cap(?![a-zA-Z])', 'INTERSECT'],
 
   ['!', '!'],
   ['\'', '\''],
@@ -267,7 +267,7 @@ const latex_rules = [
   
   ['\\\\var\\s*{\\s*[a-zA-Z0-9]+\\s*}', 'VARMULTICHAR'],
   
-  ['\\\\[a-zA-Z][a-zA-Z0-9]*', 'LATEXCOMMAND'],
+  ['\\\\[a-zA-Z]+(?![a-zA-Z])', 'LATEXCOMMAND'],
   ['[a-zA-Z]', 'VAR']
 ];
 
