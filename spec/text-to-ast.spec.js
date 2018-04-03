@@ -158,13 +158,30 @@ var trees = {
   '+2': 2,
   'oo': 'infinity',
   '+oo': 'infinity',
-  'dx/dt': ['derivative_leibniz', 'x', 't'],
-  'dx / dt': ['derivative_leibniz', 'x', 't'],
-  'd x/dt': ["*", ["/", ["*", "d", "x"], "d"], "t"],
-  '(dx)/(dt)': ["/", ["*", "d", "x"], ["*", "d", "t"]],
-  'dx_2/dt': ["*", ["/", ["*", "d", ["_", "x", 2]], "d"], "t"],
-  'd^2x/dt^2': ['derivative_leibniz_mult', 2, 'x', 't'],
-  'd^2x/dt^3': ["*", ["/", ["*", ["^", "d", 2], "x"], "d"], ["^", "t", 3]],
+  'dx/dt=q': ['=', ['derivative_leibniz', 'x', ['tuple', 't']], 'q'],
+  'dx / dt = q': ['=', ['derivative_leibniz', 'x', ['tuple', 't']], 'q'],
+  'd x/dt = q': ['=', ["*", ["/", ["*", "d", "x"], "d"], "t"], 'q'],
+  '(dx)/(dt)=q': ['=', ["/", ["*", "d", "x"], ["*", "d", "t"]], 'q'],
+  'dx_2/dt = q': ['=', ["*", ["/", ["*", "d", ["_", "x", 2]], "d"], "t"], 'q'],
+  'd^2x/dt^2=q': ['=', ['derivative_leibniz', ["tuple",'x', 2], ["tuple", ["tuple", 't', 2]]], 'q'],
+  'd^2x/dt^3 = q': ['=', ["*", ["/", ["*", ["^", "d", 2], "x"], "d"], ["^", "t", 3]], 'q'],
+  'd^2x/dsdt=q': ['=', ['derivative_leibniz', ["tuple", 'x', 2], ['tuple', "s", "t"]], 'q'],
+  'd^2x/dsdta=q': ["=", ["*", ["/", ["*", ["^", "d", 2], "x"], "d"], "s", "d", "t", "a"], "q"],
+  'd^2x/ds dt=q': ["=", ["*", ["/", ["*", ["^", "d", 2], "x"], "d"], "s", "d", "t"], "q"],
+  'd^3x/dsdt^2 a=q': ['=', ['*', ['derivative_leibniz', ["tuple", 'x', 3], ['tuple', "s", ["tuple", "t", 2]]], 'a'], 'q'],
+  'd^3x/dsdt^2a=q': ["=", ["*", ["/", ["*", ["^", "d", 3], "x"], "d"], "s", "d", ["^", "t", 2], "a"], "q"],
+  'd^3x/dsdt=q': ["=", ["*", ["/", ["*", ["^", "d", 3], "x"], "d"], "s", "d", "t"], "q"],
+  'd^3x/ds^2dt=q': ['=', ['derivative_leibniz', ["tuple", 'x', 3], ['tuple', ["tuple", "s", 2], "t"]], 'q'],
+  'd^3κ/dξdβ^2 ♡=q': ['=', ['*', ['derivative_leibniz', ["tuple", 'kappa', 3], ['tuple', "xi", ["tuple", "beta", 2]]], 'heart'], 'q'],
+  'd^3κ/dξdβ^2♡=q': ["=", ["*", ["/", ["*", ["^", "d", 3], "kappa"], "d"], "xi", "d", ["^", "beta", 2], "heart"], "q"],
+  'dx/d2 = q': ['=', ["/", ["*", "d", "x"], "d2"], 'q'],
+  'd2/dt = q': ['=', ["*", ["/", "d2", "d"], "t"], 'q'],
+  'dxy/dt = q': ['=', ["*", ["/", ["*", "d", "x", "y"], "d"], "t"], 'q'],
+  '∂x/∂t=q': ['=', ['partial_derivative_leibniz', 'x', ['tuple', 't']], 'q'],
+  '∂x / ∂t = q': ['=', ['partial_derivative_leibniz', 'x', ['tuple', 't']], 'q'],
+  '∂ x/∂t = q': ['=', ["*", ["/", ["*", "∂", "x"], "∂"], "t"], 'q'],
+  '∂^3κ/∂ξ∂β^2 ♡=q': ['=', ['*', ['partial_derivative_leibniz', ["tuple", 'kappa', 3], ['tuple', "xi", ["tuple", "beta", 2]]], 'heart'], 'q'],
+
   
 };
 
@@ -270,7 +287,7 @@ test("applied function symbols", function () {
 
 });
 
-it("allow simplified function application", function () {
+test("allow simplified function application", function () {
   let converter = new textToAst();
   expect(converter.convert('sin x')).toEqual(
     ['apply', 'sin', 'x']);
@@ -282,5 +299,21 @@ it("allow simplified function application", function () {
   converter = new textToAst({allowSimplifiedFunctionApplication: true});
   expect(converter.convert('sin x')).toEqual(
     ['apply', 'sin', 'x']);
+
+});
+
+test("parse Leibniz notation", function () {
+
+  let converter = new textToAst();
+  expect(converter.convert('dy/dx')).toEqual(
+    ['derivative_leibniz', 'y', ['tuple', 'x']]);
+  
+  converter = new textToAst({parseLeibnizNotation: false});
+  expect(converter.convert('dy/dx')).toEqual(
+    ['*', ['/', ['*', 'd', 'y'], 'd'], 'x']);
+  
+  converter = new textToAst({parseLeibnizNotation: true});
+  expect(converter.convert('dy/dx')).toEqual(
+    ['derivative_leibniz', 'y', ['tuple', 'x']]);
 
 });

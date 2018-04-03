@@ -570,12 +570,44 @@ const objectsToTest = [
     'text': '[ [ 8, 0, 0 ], [ 1, 2, 3 ] ]',
   },
   {
-    'ast': ['derivative_leibniz', 'x', 't'],
+    'ast': ['derivative_leibniz', 'x', ['tuple', 't']],
     'text': 'dx/dt',
   },
   {
-    'ast': ['derivative_leibniz_mult', 2, 'x', 't'],
+    'ast': ['derivative_leibniz', ['tuple', 'x', 2], ['tuple', ['tuple', 't', 2]]],
     'text': 'd^2x/dt^2',
+  },
+  {
+    'ast': ['derivative_leibniz', ['tuple', 'mu', 2], ['tuple', 'tau', 'xi']],
+    'text': 'd^2μ/dτdξ',
+  },
+  {
+    'ast': ['derivative_leibniz', ['tuple', 'x', 3], ['tuple', 's', ['tuple', 't', 2]]],
+    'text': 'd^3x/dsdt^2',
+  },
+  {
+    'ast': ['derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], ['tuple', 't', 1]]],
+    'text': 'd^3x/ds^2dt',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', 'x', ['tuple', 't']],
+    'text': '∂x/∂t',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', ['tuple', 'x', 2], ['tuple', ['tuple', 't', 2]]],
+    'text': '∂^2x/∂t^2',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', ['tuple', 'mu', 2], ['tuple', 'tau', 'xi']],
+    'text': '∂^2μ/∂τ∂ξ',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', 's', ['tuple', 't', 2]]],
+    'text': '∂^3x/∂s∂t^2',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], ['tuple', 't', 1]]],
+    'text': '∂^3x/∂s^2∂t',
   },
 
 ]

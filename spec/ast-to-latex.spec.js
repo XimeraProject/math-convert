@@ -572,13 +572,45 @@ const objectsToTest = [
     'ast': ['matrix', ['tuple', 2, 3], ['tuple', ['tuple', 8, 0, 0], ['tuple', 1, 2, 3]]],
     'latex': '\\begin{bmatrix} 8 & 0 & 0 \\\\ 1 & 2 & 3 \\end{bmatrix}'
   },
-    {
-    'ast': ['derivative_leibniz', 'x', 't'],
-    'latex': '\\frac{dx}{dt}',
+  {
+    'ast': ['derivative_leibniz', 'x', ['tuple', 't']],
+    'latex': '\\frac{ dx }{ dt }',
   },
   {
-    'ast': ['derivative_leibniz_mult', 2, 'x', 't'],
-    'latex': '\\frac{d^2x}{dt^2}',
+    'ast': ['derivative_leibniz', ['tuple', 'x', 2], ['tuple', ['tuple', 't', 2]]],
+    'latex': '\\frac{ d^{2}x }{ dt^{2} }',
+  },
+  {
+    'ast': ['derivative_leibniz', ['tuple', 'mu', 2], ['tuple', 'tau', 'xi']],
+    'latex': '\\frac{ d^{2}\\mu }{ d\\tau d\\xi }',
+  },
+  {
+    'ast': ['derivative_leibniz', ['tuple', 'x', 3], ['tuple', 's', ['tuple', 't', 2]]],
+    'latex': '\\frac{ d^{3}x }{ ds dt^{2} }',
+  },
+  {
+    'ast': ['derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], ['tuple', 't', 1]]],
+    'latex': '\\frac{ d^{3}x }{ ds^{2} dt }',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', 'x', ['tuple', 't']],
+    'latex': '\\frac{ \\partial x }{ \\partial t }',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', ['tuple', 'x', 2], ['tuple', ['tuple', 't', 2]]],
+    'latex': '\\frac{ \\partial^{2}x }{ \\partial t^{2} }',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', ['tuple', 'mu', 2], ['tuple', 'tau', 'xi']],
+    'latex': '\\frac{ \\partial^{2}\\mu }{ \\partial \\tau \\partial \\xi }',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', 's', ['tuple', 't', 2]]],
+    'latex': '\\frac{ \\partial^{3}x }{ \\partial s \\partial t^{2} }',
+  },
+  {
+    'ast': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], ['tuple', 't', 1]]],
+    'latex': '\\frac{ \\partial^{3}x }{ \\partial s^{2} \\partial t }',
   },
 
 
