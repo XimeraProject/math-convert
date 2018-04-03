@@ -34,6 +34,7 @@
     "rollup-plugin-node-resolve": "^3.3.0"
   },
   "dependencies": {
-    "mathjs": "^4.0.1"
+    "mathjs": "^4.0.1",
+    "xml-parser": "^1.2.1"
   }
 }
