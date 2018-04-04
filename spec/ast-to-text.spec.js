@@ -609,6 +609,18 @@ const objectsToTest = [
     'ast': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], ['tuple', 't', 1]]],
     'text': '∂^3x/∂s^2∂t',
   },
+  {
+    'ast': ["*","a",["apply","abs","x"]],
+    'text': 'a |x|',
+  },
+  {
+    'ast': ["*",["apply","abs","a"],"b",["apply","abs","c"]],
+    'text': '|a| b |c|',
+  },
+  {
+    'ast': ["apply","abs",["*","a",["apply","abs","b"],"c"]],
+    'text': '|a |b| c|',
+  },
 
 ]
 

@@ -169,11 +169,11 @@ const latex_rules = [
   ['\\\\biggr\\s*\\]', ']'],
   ['\\\\Biggr\\s*\\]', ']'],
   ['\\|', '|'],
-  ['\\\\left\\s*\\|', '|'],
-  ['\\\\bigl\\s*\\|', '|'],
-  ['\\\\Bigl\\s*\\|', '|'],
-  ['\\\\biggl\\s*\\|', '|'],
-  ['\\\\Biggl\\s*\\|', '|'],
+  ['\\\\left\\s*\\|', '|L'],
+  ['\\\\bigl\\s*\\|', '|L'],
+  ['\\\\Bigl\\s*\\|', '|L'],
+  ['\\\\biggl\\s*\\|', '|L'],
+  ['\\\\Biggl\\s*\\|', '|L'],
   ['\\\\right\\s*\\|', '|'],
   ['\\\\bigr\\s*\\|', '|'],
   ['\\\\Bigr\\s*\\|', '|'],
@@ -1215,15 +1215,17 @@ class latexToAst {
 
       this.advance();
 
-    } else if (this.token.token_type == '|' &&
-	       (this.inside_absolute_value==0 || !allow_absolute_value_closing)) {
+    } else if (this.token.token_type[0] == '|' &&
+	       (this.inside_absolute_value==0 || !allow_absolute_value_closing ||
+		this.token.token_type[1] == 'L')) {
 
       // allow the opening of an absolute value here if either
-      // - we aren't already inside an absolute value (inside_absolute_value==0), or
-      // - we don't allows an absolute value closing
+      // - we aren't already inside an absolute value (inside_absolute_value==0),
+      // - we don't allows an absolute value closing, or
+      // - the | was marked as a left
       // otherwise, skip this token so that will drop out the factor (and entire statement)
       // to where the absolute value will close
-      
+
       this.inside_absolute_value += 1;
       
       this.advance();

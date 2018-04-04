@@ -612,6 +612,18 @@ const objectsToTest = [
     'ast': ['partial_derivative_leibniz', ['tuple', 'x', 3], ['tuple', ['tuple', 's', 2], ['tuple', 't', 1]]],
     'latex': '\\frac{ \\partial^{3}x }{ \\partial s^{2} \\partial t }',
   },
+  {
+    'ast': ["*","a",["apply","abs","x"]],
+    'latex': 'a \\, \\left|x\\right|',
+  },
+  {
+    'ast': ["*",["apply","abs","a"],"b",["apply","abs","c"]],
+    'latex': '\\left|a\\right| \\, b \\, \\left|c\\right|',
+  },
+  {
+    'ast': ["apply","abs",["*","a",["apply","abs","b"],"c"]],
+    'latex': '\\left|a \\, \\left|b\\right| \\, c\\right|',
+  },
 
 
 ]

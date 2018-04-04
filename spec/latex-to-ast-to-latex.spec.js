@@ -183,6 +183,9 @@ var inputs = [
   '\\frac{d x}{d t}',
   ['\\frac{d^2x}{dt^2}', '\\frac{d^{2}x}{dt^{2}}'], 
   ['\\frac{d^2 x}{d t^2}','\\frac{d^{2} x}{d t^{2}}'],
+  'a |x|',
+  ['|a|b|c|', '\\left|a\\right| b \\left|c\\right|'],
+  '\\left|a \\left|b\\right| c\\right|',
 ];
 
 function clean(text) {

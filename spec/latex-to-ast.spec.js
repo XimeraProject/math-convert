@@ -201,6 +201,7 @@ var trees = {
   '|a|b|c|': ['*',['apply', 'abs', 'a'], 'b', ['apply', 'abs', 'c']],
   '|a|*b*|c|': ['*',['apply', 'abs', 'a'], 'b', ['apply', 'abs', 'c']],
   '|a*|b|*c|': ['apply', 'abs', ['*', 'a', ['apply', 'abs', 'b'], 'c']],
+  '\\left|a\\left|b\\right|c\\right|': ['apply', 'abs', ['*', 'a', ['apply', 'abs', 'b'], 'c']],
 
 };
 
