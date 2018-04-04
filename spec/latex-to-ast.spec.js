@@ -196,7 +196,12 @@ var trees = {
   '2\\cdot3': ['*', 2, 3],
   '2 \\times 3': ['*', 2, 3],
   '2\\times3': ['*', 2, 3],
-  
+  '\\sin2': ['apply', 'sin', 2],
+  '3|x|': ['*', 3, ['apply', 'abs', 'x']],
+  '|a|b|c|': ['*',['apply', 'abs', 'a'], 'b', ['apply', 'abs', 'c']],
+  '|a|*b*|c|': ['*',['apply', 'abs', 'a'], 'b', ['apply', 'abs', 'c']],
+  '|a*|b|*c|': ['apply', 'abs', ['*', 'a', ['apply', 'abs', 'b'], 'c']],
+
 };
 
 
@@ -214,7 +219,7 @@ var bad_inputs = {
   ')1++1': "Invalid location of ')'",
   '(1+1': "Expected )",
   'x-y-': "Unexpected end of input",
-  '|x| |y|': "Invalid location of '|'",
+  '|x_|': "Unexpected end of input",
   '_x': "Invalid location of _",
   'x_': "Unexpected end of input",
   'x@2': "Invalid symbol '@'",

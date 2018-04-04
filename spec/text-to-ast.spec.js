@@ -181,6 +181,10 @@ var trees = {
   '∂x / ∂t = q': ['=', ['partial_derivative_leibniz', 'x', ['tuple', 't']], 'q'],
   '∂ x/∂t = q': ['=', ["*", ["/", ["*", "∂", "x"], "∂"], "t"], 'q'],
   '∂^3κ/∂ξ∂β^2 ♡=q': ['=', ['*', ['partial_derivative_leibniz', ["tuple", 'kappa', 3], ['tuple', "xi", ["tuple", "beta", 2]]], 'heart'], 'q'],
+  '3|x|': ['*', 3, ['apply', 'abs', 'x']],
+  '|a|b|c|': ['*',['apply', 'abs', 'a'], 'b', ['apply', 'abs', 'c']],
+  '|a|*b*|c|': ['*',['apply', 'abs', 'a'], 'b', ['apply', 'abs', 'c']],
+  '|a*|b|*c|': ['apply', 'abs', ['*', 'a', ['apply', 'abs', 'b'], 'c']],
 
   
 };
@@ -199,7 +203,7 @@ var bad_inputs = {
   ')1++1': "Invalid location of ')'",
   '(1+1': "Expected )",
   'x-y-': "Unexpected end of input",
-  '|x| |y|': "Invalid location of '|'",
+  '|x_|': "Unexpected end of input",
   '_x': "Invalid location of _",
   'x_': "Unexpected end of input",
   'x@2': "Invalid symbol '@'",

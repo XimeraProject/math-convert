@@ -81,6 +81,7 @@ import flatten from './flatten';
     '{' statement_list '}' |
     '(' statement ',' statement ']' |
     '[' statement ',' statement ')' |
+    '|' statement '|' |
     number |
     variable |
     modified_function '(' statement_list ')' |
@@ -90,6 +91,9 @@ import flatten from './flatten';
     baseFactor '_' baseFactor |
     *** modified_applied_function factor
         allowed only if allowSimplifiedFunctionApplication==true
+    *** '|' statement '|'
+        allowed only at beginning of factor or if not currently in absolute value
+
 
    modified_function =
     function |
@@ -122,8 +126,7 @@ import flatten from './flatten';
 
    factor =
     '-' factor |
-    nonMinusFactor |
-    '|' statement '|'
+    nonMinusFactor
 
 */
 
@@ -359,6 +362,7 @@ class textToAst {
 
   convert(input) {
 
+    this.inside_absolute_value = 0;
     this.lexer.set_input(input);
     this.advance();
 
@@ -574,7 +578,9 @@ class textToAst {
         lhs = ['/', lhs, this.factor()];
         keepGoing = true;
       } else {
-        var rhs = this.nonMinusFactor();
+	// this is the one case where a | could indicate a closing absolute value
+	let allow_absolute_value_closing = true;
+	var rhs = this.nonMinusFactor(allow_absolute_value_closing);
         if (rhs !== false) {
           lhs = ['*', lhs, rhs];
           keepGoing = true;
@@ -593,19 +599,6 @@ class textToAst {
       return ['-', this.factor()];
     }
 
-    if (this.token.token_type == '|') {
-      this.advance();
-
-      var result = this.statement();
-      result = ['apply', 'abs', result];
-
-      if (this.token.token_type != '|') {
-        throw new ParseError('Expected |', this.lexer.location);
-      }
-      this.advance();
-      return result;
-    }
-
     var result = this.nonMinusFactor();
 
     if (result === false) {
@@ -621,9 +614,9 @@ class textToAst {
 
   }
 
-  nonMinusFactor() {
+  nonMinusFactor(allow_absolute_value_closing = false) {
 
-    var result = this.baseFactor();
+    var result = this.baseFactor(allow_absolute_value_closing);
 
     // allow arbitrary sequence of factorials
     if (this.token.token_type == '!' || this.token.token_type == "'") {
@@ -651,7 +644,7 @@ class textToAst {
   }
 
 
-  baseFactor() {
+  baseFactor(allow_absolute_value_closing = false) {
     var result = false;
 
     if (this.token.token_type == 'NUMBER') {
@@ -1060,7 +1053,31 @@ class textToAst {
       }
 
       this.advance();
+      
+    } else if (this.token.token_type == '|' &&
+	       (this.inside_absolute_value==0 || !allow_absolute_value_closing)) {
+
+      // allow the opening of an absolute value here if either
+      // - we aren't already inside an absolute value (inside_absolute_value==0), or
+      // - we don't allows an absolute value closing
+      // otherwise, skip this token so that will drop out the factor (and entire statement)
+      // to where the absolute value will close
+      
+      this.inside_absolute_value += 1;
+      
+      this.advance();
+
+      var result = this.statement();
+      result = ['apply', 'abs', result];
+
+      if (this.token.token_type != '|') {
+        throw new ParseError('Expected |', this.lexer.location);
+      }
+      this.inside_absolute_value -= 1;
+
+      this.advance();
     }
+
 
     if (this.token.token_type == '_') {
       if (result === false) {
