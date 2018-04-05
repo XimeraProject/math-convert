@@ -35,8 +35,21 @@ class lexer {
     this.input = input;
     this.location = 0;
   }
+
+  return_state() {
+    return({ input: this.input, location: this.location });
+  }
+
+  set_state({ input=null, location=0 } = {}) {
+
+    if(input !== null) {
+      this.input = input;
+      this.location = location;
+    }
+  }
   
-  advance({remove_initial_space=true} = {}) {
+  
+  advance({ remove_initial_space=true } = {}) {
     // Find next token at beginning of input and delete from input.
     // Update location to be the position in original input corresponding
     // to end of match.

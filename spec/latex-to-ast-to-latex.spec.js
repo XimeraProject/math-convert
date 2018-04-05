@@ -186,6 +186,11 @@ var inputs = [
   'a |x|',
   ['|a|b|c|', '\\left|a\\right| b \\left|c\\right|'],
   '\\left|a \\left|b\\right| c\\right|',
+  ['A | B', 'A \\mid B'],
+  'A : B',
+  ['A > B | C and D', 'A > B \\mid C and D'],
+  'A or B : C < D',
+  ['\\{ x_t | t \\in Z \\}', '\\{ x_{t} \\mid t \\in Z \\}'],
 ];
 
 function clean(text) {

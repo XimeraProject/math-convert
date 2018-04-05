@@ -624,6 +624,30 @@ const objectsToTest = [
     'ast': ["apply","abs",["*","a",["apply","abs","b"],"c"]],
     'latex': '\\left|a \\, \\left|b\\right| \\, c\\right|',
   },
+  {
+    'ast': ['|', 'A', 'B'],
+    'latex': 'A \\mid B',
+  },
+  {
+    'ast': [':', 'A', 'B'],
+    'latex': 'A : B',
+  },
+  {
+    'ast': ['apply', 'P', ['|', ['>', 'X', 1], ['=', 'A', 'B']]],
+    'latex': 'P\\left(X > 1 \\mid A = B\\right)',
+  },
+  {
+    'ast': ['apply', 'P', [':', ['>', 'X', 1], ['=', 'A', 'B']]],
+    'latex': 'P\\left(X > 1 : A = B\\right)',
+  },
+  {
+    'ast': ['set', ['|', 'x', ['>', 'x', 0]]],
+    'latex': '\\left\\{ x \\mid x > 0 \\right\\}',
+  },
+  {
+    'ast': ['set', [':', 'x', ['>', 'x', 0]]],
+    'latex': '\\left\\{ x : x > 0 \\right\\}',
+  },
 
 
 ]

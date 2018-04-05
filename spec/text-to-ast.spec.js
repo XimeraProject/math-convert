@@ -185,8 +185,11 @@ var trees = {
   '|a|b|c|': ['*',['apply', 'abs', 'a'], 'b', ['apply', 'abs', 'c']],
   '|a|*b*|c|': ['*',['apply', 'abs', 'a'], 'b', ['apply', 'abs', 'c']],
   '|a*|b|*c|': ['apply', 'abs', ['*', 'a', ['apply', 'abs', 'b'], 'c']],
-
-  
+  '|a(q|b|r)c|': ['apply', 'abs', ['*', 'a', 'q', ['apply', 'abs', 'b'], 'r', 'c']],
+  'r=1|x': ['|', ['=', 'r', 1], 'x'],
+  '{ x | x > 0 }': ['set', ['|', 'x', ['>', 'x', 0]]],
+  'r=1:x': [':', ['=', 'r', 1], 'x'],
+  '{ x : x > 0 }': ['set', [':', 'x', ['>', 'x', 0]]],
 };
 
 Object.keys(trees).forEach(function(string) {
@@ -320,4 +323,29 @@ test("parse Leibniz notation", function () {
   expect(converter.convert('dy/dx')).toEqual(
     ['derivative_leibniz', 'y', ['tuple', 'x']]);
 
+});
+
+
+test("conditional probability", function () {
+  
+  let converter = new textToAst({functionSymbols: ["P"]});
+  
+  expect(converter.convert("P(A|B)")).toEqual(
+    ['apply', 'P', ['|', 'A', 'B']]);
+
+  expect(converter.convert("P(A:B)")).toEqual(
+    ['apply', 'P', [':', 'A', 'B']]);
+
+  expect(converter.convert("P(R=1|X>2)")).toEqual(
+    ['apply', 'P', ['|', ['=', 'R', 1], ['>', 'X', 2]]]);
+
+  expect(converter.convert("P(R=1:X>2)")).toEqual(
+    ['apply', 'P', [':', ['=', 'R', 1], ['>', 'X', 2]]]);
+
+  expect(converter.convert("P( A and B | C or D )")).toEqual(
+    ['apply', 'P', ['|', ['and', 'A', 'B'], ['or', 'C', 'D']]]);
+
+  expect(converter.convert("P( A and B : C or D )")).toEqual(
+    ['apply', 'P', [':', ['and', 'A', 'B'], ['or', 'C', 'D']]]);
+  
 });
