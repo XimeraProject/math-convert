@@ -417,6 +417,7 @@ class textToAst {
   statement({inside_absolute_value = 0} = {}) {
 
     var original_state;
+    
     try {
       
       original_state = this.return_state();

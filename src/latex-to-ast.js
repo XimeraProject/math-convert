@@ -380,11 +380,12 @@ class latexToAst {
 
   statement({inside_absolute_value = 0} = {}) {
 
-    var original_lexer_state;
-    var original_token;
+    var original_state;
+
     try {
-      original_lexer_state = this.lexer.return_state();
-      original_token = Object.assign({}, this.token);
+
+      original_state = this.return_state();
+
       let lhs=this.statement_a({inside_absolute_value: inside_absolute_value});
 
       if(this.token.token_type !== ':' && this.token.token_type !== 'MID')
@@ -406,9 +407,8 @@ class latexToAst {
 	// then try again with ignoring absolute value
 	// and then interpreting bar as a binary operator
 
-	// return lexer to state it was before attempting to parse statement
-	this.lexer.set_state(original_lexer_state);
-	this.token = Object.assign({}, original_token);
+	// return state to what it was before attempting to parse statement
+	this.set_state(original_state);
 
 	let lhs = this.statement_a({ parse_absolute_value: false });
 
