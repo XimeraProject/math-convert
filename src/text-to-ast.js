@@ -369,6 +369,17 @@ class textToAst {
     }
   }
 
+  return_state() {
+    return ({ lexer_state: this.lexer.return_state(),
+	      token: Object.assign({}, this.token) });
+  }
+
+  set_state(state) {
+    this.lexer.set_state(state.lexer_state);
+    this.token = Object.assign({}, state.token);
+  }
+
+
   convert(input) {
 
     this.lexer.set_input(input);
@@ -405,11 +416,11 @@ class textToAst {
 
   statement({inside_absolute_value = 0} = {}) {
 
-    var original_lexer_state;
-    var original_token;
+    var original_state;
     try {
-      original_lexer_state = this.lexer.return_state();
-      original_token = Object.assign({}, this.token);
+      
+      original_state = this.return_state();
+
       let lhs=this.statement_a({inside_absolute_value: inside_absolute_value});
 
       if(this.token.token_type !== ':')
@@ -429,9 +440,8 @@ class textToAst {
 	// then try again with ignoring absolute value
 	// and then interpreting bar as a binary operator
 
-	// return lexer to state it was before attempting to parse statement
-	this.lexer.set_state(original_lexer_state);
-	this.token = Object.assign({}, original_token);
+	// return state to what it was before attempting to parse statement
+	this.set_state(original_state);
 
 	let lhs = this.statement_a({ parse_absolute_value: false });
 
@@ -795,247 +805,22 @@ class textToAst {
       } else {
 	
 	// determine if may be a derivative in Leibniz notation
-	if(this.parseLeibnizNotation 
-	   && this.token.token_type == 'VAR' && (result[0]=="d" || result[0] == "∂")
-	   && (result.length==1 || (result.length==2 && /[a-zA-Z]/.exec(result[1])))) {
+	if(this.parseLeibnizNotation) {
 
-	  // found one of these two possibilities for start of derivative are
-	  // - dx or ∂x (no space, x is a single letter)
-	  // - d or ∂ 
+	  let original_state = this.return_state();
 
-	  let deriv_symbol = result[0];
+	  let r = this.leibniz_notation();
 	  
-	  let derivative_possible = true;
-	  let token_list = [this.token.original_text];
-	  
-	  let n_deriv = 1;
-	  
-	  let var1 = "";
-	  let var2s = [];
-	  let var2_exponents = [];
-
-	  if(result.length == 2) 
-	    var1 = result[1];
-	  else { // result is length 1
-	    
-	    // since have just a d or ∂
-	    // must be followed by a ^ or a VARMULTICHAR
-	    this.advance({remove_initial_space: false});
-	    token_list.push(this.token.original_text);
-
-	    if(this.token.token_type == 'VARMULTICHAR') {
-	      var1 = this.token.token_text;
-	    }
-	    
-	    else {
-	      // since not VARMULTICHAR, must be a ^ next
-	      if(this.token.token_type != '^') {
-		derivative_possible = false;
-	      }
-	      else {
-		// so far have d or ∂ followed by ^
-		// must be followed by an integer
-		this.advance({remove_initial_space: false});
-		token_list.push(this.token.original_text);
-		
-		if(this.token.token_type != 'NUMBER') {
-		  derivative_possible = false;
-		}
-		else {
-		  n_deriv = parseFloat(this.token.token_text);
-		  if(!Number.isInteger(n_deriv)) {
-		    derivative_possible = false;
-		  }
-		  else {
-		    // see if next character is single character
-		    this.advance({remove_initial_space: false});
-		    token_list.push(this.token.original_text);
-		    
-		    // either a single letter from VAR
-		    // or a VARMULTICHAR 
-		    if((this.token.token_type=='VAR' && (/^[a-zA-Z]$/.exec(this.token.token_text)))
-		       || this.token.token_type == 'VARMULTICHAR') {
-		      var1 = this.token.token_text;
-		    }
-		    else {
-		      derivative_possible=false;
-		    }
-		  }
-		}
-	      }
-	    }
+	  if(r) {
+	    // successfully parsed derivative in Leibniz notation, so return
+	    return r;
 	  }
-
-	  // next character must be a /
-	  if(derivative_possible) {
-	    // allow a space this time, but store in token_list
-	    this.advance({remove_initial_space: false});
-	    token_list.push(this.token.original_text);
-	    if(this.token.token_type == "SPACE") {
-	      this.advance({remove_initial_space: false});
-	      token_list.push(this.token.original_text);
-	    }
-
-	    if(this.token.token_type != '/')
-	      derivative_possible = false;
-	    else {
-	      
-	      // find sequence of
-	      // derivative symbol followed by a single character or VARMULTICHAR (with no space)
-	      // optionally followed by a ^ and an integer (with no spaces)
-	      // (with spaces allowed between elements of sequence)
-	      // End when sum of exponents meets or exceeds n_deriv
-
-	      let exponent_sum = 0;
-
-	      this.advance({remove_initial_space: false});
-	      token_list.push(this.token.original_text);
-
-	      // allow space just after the /
-	      if(this.token.token_type == "SPACE") {
-		this.advance({remove_initial_space: false});
-		token_list.push(this.token.original_text);
-	      }
-	      
-	      while(true) {
-	      
-		// next must either be
-		// - a VAR whose first character matches derivative symbol
-		//   and whose second character is a letter, or
-		// - a single character VAR that matches derivative symbol
-		//   which must be followed by a VARMULTICHAR (with no space)
-
-		
-		if(this.token.token_type != 'VAR'|| this.token.token_text[0] !== deriv_symbol) {
-		  derivative_possible = false
-		  break;
-		}
-
-		
-		if(this.token.token_text.length > 2) {
-		  // Put extra characters back on lexer
-		  this.lexer.unput(this.token.token_text.slice(2));
-
-		  // keep just two character token
-		  this.token.token_text = this.token.token_text.slice(0,2);
-
-		  // show that only two characters were taken
-		  token_list[token_list.length-1] = this.token.token_text;
-		}
-
-		
-		let token_text = this.token.token_text;
-
-		// derivative symbol and variable together
-		if(token_text.length == 2) {
-		  if(/[a-zA-Z]/.exec(token_text[1])) 
-		    var2s.push(token_text[1])
-		  else {
-		    derivative_possible = false;
-		    break;
-		  }
-		}
-		else { // token text was just the derivative symbol
-		  this.advance({remove_initial_space: false});
-		  token_list.push(this.token.original_text);
-
-		  if(this.token.token_type !== 'VARMULTICHAR') {
-		    derivative_possible = false;
-		    break;
-		  }
-		  else
-		    var2s.push(this.token.token_text);
-		}
-
-
-		// have derivative and variable, now check for optional ^ followed by number
-
-		let this_exponent = 1;
-
-		this.advance({remove_initial_space: false});
-		token_list.push(this.token.original_text);
-		
-		if(this.token.token_type === '^') {
-
-		  this.advance({remove_initial_space: false});
-		  token_list.push(this.token.original_text);
-
-		  if(this.token.token_type != 'NUMBER') {
-		    derivative_possible = false;
-		    break;
-		  }
-
-		  this_exponent = parseFloat(this.token.token_text);
-		  if(!Number.isInteger(this_exponent)) {
-		    derivative_possible = false;
-		    break;
-		  }
-
-		  this.advance({remove_initial_space: false});
-		  token_list.push(this.token.original_text);
-		  
-		}
-
-		var2_exponents.push(this_exponent);
-		exponent_sum += this_exponent;
-
-		if(exponent_sum > n_deriv) {
-		  derivative_possible= false;
-		  break;
-		}
-
-		// possibly found derivative
-		if(exponent_sum == n_deriv) {
-
-		  // check to make sure next token isn't another VAR or VARMULTICHAR
-		  // in this case, the derivative isn't separated from what follows
-		  if(this.token.token_type == "VAR" || this.token.token_type == "VARMULTICHAR") {
-		    derivative_possible = false;
-		    break;
-		  }
-
-		  // found derivative!
-		  
-		  // if last token was a space advance to next non-space token
-		  if(this.token.token_type=="SPACE")
-		    this.advance();
-
-		  let result_name = "derivative_leibniz"
-		  if(deriv_symbol == "∂")
-		    result_name = "partial_" + result_name;
-
-		  result = [result_name];
-		  
-		  if(n_deriv == 1)
-		    result.push(var1);
-		  else
-		    result.push(["tuple", var1, n_deriv]);
-
-		  let r2 = []
-		  for(let i=0; i<var2s.length; i+=1) {
-		    if(var2_exponents[i] == 1)
-		      r2.push(var2s[i])
-		    else
-		      r2.push(["tuple", var2s[i], var2_exponents[i]]);
-		  }
-		  r2 = ["tuple"].concat(r2);
-
-		  result.push(r2);
-		  
-		  return result;
-		  
-		}
-	      }
-	    }
+	  else {
+	    // didn't find a properly format Leibniz notation
+	    // so reset state and continue
+	    this.set_state(original_state);
 	  }
-	  
-	  // failed to get derivative, push back extra tokens on lexer
-	  for(let token of token_list.reverse()) {
-	    this.lexer.unput(token);
-	  }
-	  this.advance();
-	  
-	} // end of checking if Leibniz derivative
+	}
       	
         // determine if should split text into single letter factors
         var split = this.splitSymbols;
@@ -1175,6 +960,209 @@ class textToAst {
     return result;
   }
 
+
+  leibniz_notation() {
+    // attempt to find and return a derivative in Leibniz notation
+    // if unsuccessful, return false
+
+    var result = this.token.token_text;
+    
+    if(!(this.token.token_type == 'VAR' && (result[0]=="d" || result[0] == "∂")
+	 && (result.length==1 || (result.length==2 && /[a-zA-Z]/.exec(result[1]))))) {
+      return false;
+    }
+    
+    // found one of these two possibilities for start of derivative are
+    // - dx or ∂x (no space, x is a single letter)
+    // - d or ∂ 
+    
+    let deriv_symbol = result[0];
+    
+    let derivative_possible = true;
+    
+    let n_deriv = 1;
+    
+    let var1 = "";
+    let var2s = [];
+    let var2_exponents = [];
+
+    if(result.length == 2) 
+      var1 = result[1];
+    else { // result is length 1
+      
+      // since have just a d or ∂
+      // must be followed by a ^ or a VARMULTICHAR
+      this.advance({remove_initial_space: false});
+
+      if(this.token.token_type == 'VARMULTICHAR') {
+	var1 = this.token.token_text;
+      }
+      
+      else {
+	// since not VARMULTICHAR, must be a ^ next
+	if(this.token.token_type != '^') {
+	  return false;
+	}
+
+	// so far have d or ∂ followed by ^
+	// must be followed by an integer
+	this.advance({remove_initial_space: false});
+	
+	if(this.token.token_type != 'NUMBER') {
+	  return false;
+	}
+	
+	n_deriv = parseFloat(this.token.token_text);
+	if(!Number.isInteger(n_deriv)) {
+	  return false;
+	}
+	
+	// see if next character is single character
+	this.advance({remove_initial_space: false});
+	
+	// either a single letter from VAR
+	// or a VARMULTICHAR 
+	if((this.token.token_type=='VAR' && (/^[a-zA-Z]$/.exec(this.token.token_text)))
+	   || this.token.token_type == 'VARMULTICHAR') {
+	  var1 = this.token.token_text;
+	}
+	else {
+	  return false;
+	}
+      }
+    }
+    
+    // next character must be a /
+
+    this.advance(); // allow a space this time
+
+    if(this.token.token_type != '/')
+      return false;
+    
+    // find sequence of
+    // derivative symbol followed by a single character or VARMULTICHAR (with no space)
+    // optionally followed by a ^ and an integer (with no spaces)
+    // (with spaces allowed between elements of sequence)
+    // End when sum of exponents meets or exceeds n_deriv
+    
+    let exponent_sum = 0;
+    
+    this.advance(); // allow space just after the /
+
+    while(true) {
+      
+      // next must either be
+      // - a VAR whose first character matches derivative symbol
+      //   and whose second character is a letter, or
+      // - a single character VAR that matches derivative symbol
+      //   which must be followed by a VARMULTICHAR (with no space)
+      
+      if(this.token.token_type != 'VAR'|| this.token.token_text[0] !== deriv_symbol) {
+	return false;
+      }
+
+      if(this.token.token_text.length > 2) {
+	// Put extra characters back on lexer
+	this.lexer.unput(this.token.token_text.slice(2));
+
+	// keep just two character token
+	this.token.token_text = this.token.token_text.slice(0,2);
+
+      }
+
+      let token_text = this.token.token_text;
+
+      // derivative symbol and variable together
+      if(token_text.length == 2) {
+	if(/[a-zA-Z]/.exec(token_text[1])) 
+	  var2s.push(token_text[1])
+	else {
+	  return false;
+	}
+      }
+      else { // token text was just the derivative symbol
+	this.advance({remove_initial_space: false});
+
+	if(this.token.token_type !== 'VARMULTICHAR') {
+	  return false;
+	}
+	var2s.push(this.token.token_text);
+      }
+      
+      // have derivative and variable, now check for optional ^ followed by number
+      
+      let this_exponent = 1;
+      
+      this.advance({remove_initial_space: false});
+      
+      if(this.token.token_type === '^') {
+	
+	this.advance({remove_initial_space: false});
+	
+	if(this.token.token_type != 'NUMBER') {
+	  return false;
+	}
+	  
+	this_exponent = parseFloat(this.token.token_text);
+	if(!Number.isInteger(this_exponent)) {
+	  return false;
+	}
+	
+	this.advance({remove_initial_space: false});
+	
+      }	  
+      var2_exponents.push(this_exponent);
+      exponent_sum += this_exponent;
+      
+      if(exponent_sum > n_deriv) {
+	return false;
+      }
+      
+      // possibly found derivative
+      if(exponent_sum == n_deriv) {
+
+	// check to make sure next token isn't another VAR or VARMULTICHAR
+	// in this case, the derivative isn't separated from what follows
+	if(this.token.token_type == "VAR" || this.token.token_type == "VARMULTICHAR") {
+	  return false;
+	}
+
+	// found derivative!
+	
+	// if last token was a space advance to next non-space token
+	if(this.token.token_type=="SPACE")
+	  this.advance();
+
+	let result_name = "derivative_leibniz"
+	if(deriv_symbol == "∂")
+	  result_name = "partial_" + result_name;
+
+	result = [result_name];
+	
+	if(n_deriv == 1)
+	  result.push(var1);
+	else
+	  result.push(["tuple", var1, n_deriv]);
+	
+	let r2 = []
+	for(let i=0; i<var2s.length; i+=1) {
+	  if(var2_exponents[i] == 1)
+	    r2.push(var2s[i])
+	  else
+	    r2.push(["tuple", var2s[i], var2_exponents[i]]);
+	}
+	r2 = ["tuple"].concat(r2);
+	
+	result.push(r2);
+	
+	return result;
+      }
+    }
+  
+    // failed to get derivative, push back extra tokens on lexer
+    return false;
+    
+  }
 }
 
 export default textToAst;

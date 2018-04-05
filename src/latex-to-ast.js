@@ -334,6 +334,17 @@ class latexToAst {
     }
   }
 
+  return_state() {
+    return ({ lexer_state: this.lexer.return_state(),
+	      token: Object.assign({}, this.token) });
+  }
+
+  set_state(state) {
+    this.lexer.set_state(state.lexer_state);
+    this.token = Object.assign({}, state.token);
+  }
+
+
   convert(input){
 
     this.lexer.set_input(input);
@@ -702,271 +713,21 @@ class latexToAst {
 
       // determine if may be a derivative in Leibniz notation
       if(this.parseLeibnizNotation) {
-	result = this.token.token_text;
-
-	let deriv_symbol = "";
-	let derivative_possible = true;
-	let token_list = [this.token.original_text_with_space];
 	
-	let n_deriv = 1;
+	let original_state = this.return_state();
+
+	let r = this.leibniz_notation();
 	
-	let var1 = "";
-	let var2s = [];
-	let var2_exponents = [];
-
-	if(this.token.token_type == "LATEXCOMMAND" && result.slice(1) == "partial")
-	  deriv_symbol = "∂";
-	else if(this.token.token_type == "VAR" && result=="d")
-	  deriv_symbol = "d";
-	else
-	  derivative_possible = false;
-
-	if(derivative_possible) {
-	  // since have just a d or ∂
-	  // one option is that have a ^ followed by an integer next possibly in {}
-	  
-	  this.advance();
-	  token_list.push(this.token.original_text_with_space);
-
-	  if(this.token.token_type === '^') {
-	    // so far have d or ∂ followed by ^
-	    // must be followed by an integer
-	    this.advance();
-	    token_list.push(this.token.original_text_with_space);
-
-	    let in_braces = false;
-	    if(this.token.token_type === '{') {
-	      in_braces = true;
-	      
-	      this.advance();
-	      token_list.push(this.token.original_text_with_space);
-	    }
-	    
-	    if(this.token.token_type != 'NUMBER') {
-	      derivative_possible = false;
-	    }
-	    else {
-	      n_deriv = parseFloat(this.token.token_text);
-	      if(!Number.isInteger(n_deriv)) {
-		derivative_possible = false;
-	      }
-	    }
-
-	    if(derivative_possible) {
-	      // found integer,
-
-	      // if in braces, require }
-	      if(in_braces) {
-		this.advance();
-		token_list.push(this.token.original_text_with_space);
-
-		if(this.token.token_type != '}') {
-		  derivative_possible = false;
-		}
-	      }
-	      
-	      this.advance();
-	      token_list.push(this.token.original_text_with_space);
-	    }
-	  }
+	if(r) {
+	  // successfully parsed derivative in Leibniz notation, so return
+	  return r;
 	}
-	
-	if(derivative_possible) {
-	  // since have a d or ∂, optionally followed by ^ and integer
-	  // next we must have:
-	  // a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
-	  
-	  if(this.token.token_type == 'VAR')
-	    var1 = this.token.token_text;
-	  else if(this.token.token_type == 'VARMULTICHAR') {
-	    // strip out name of variable from \var command
-	    var1 = /\\var\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token.token_text)[1];
-	  }
-	  else if(this.token.token_type == 'LATEXCOMMAND') {
-	    result = this.token.token_text.slice(1);
-	    if(this.allowedLatexSymbols.includes(result))
-	      var1 = result;
-	    else
-	      derivative_possible=false;
-	  }
+	else {
+	  // didn't find a properly format Leibniz notation
+	  // so reset state and continue
+	  this.set_state(original_state);
 	}
-
-	if(derivative_possible) {
-	  // Finished numerator.
-	  // Next need a } and {
-
-      	  this.advance();
-	  token_list.push(this.token.original_text_with_space);
-	  
-	  if (this.token.token_type != '}') {
-	    derivative_possible = false;
-	  }
-	  else {
-	    this.advance();
-	    token_list.push(this.token.original_text_with_space);
-	    
-	    if (this.token.token_type != '{') {
-	      derivative_possible = false;
-	    }
-	    else {
-	      this.advance();
-	      token_list.push(this.token.original_text_with_space);
-	    }
-	  }
-	}
-
-	if(derivative_possible) {
-
-	  // In denominator now
-	  // find sequence of
-	  // derivative symbol followed by
-	  // - a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
-	  // optionally followed by a ^ and an integer
-	  // End when sum of exponents meets or exceeds n_deriv
-	  
-	  let exponent_sum = 0;
-
-	  while(true) {
-	      
-	    // next must be
-	    // - a VAR equal to deriv_symbol="d" or \partial when deriv_symbol = "∂"
-
-
-	    if(!((deriv_symbol == "d" && this.token.token_type == "VAR" && this.token.token_text=="d")
-		 || (deriv_symbol == "∂" && this.token.token_type == "LATEXCOMMAND"
-		     && this.token.token_text.slice(1) == "partial"))) {
-	      derivative_possible = false;
-	      break;
-	    }
-	    
-	    // followed by
-	    // - a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
-	    
-	    this.advance();
-	    token_list.push(this.token.original_text_with_space);
-
-	    if(this.token.token_type == 'VAR')
-	      var2s.push(this.token.token_text);
-	    else if(this.token.token_type == 'VARMULTICHAR') {
-	      // strip out name of variable from \var command
-	      var2s.push(/\\var\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token.token_text)[1]);
-	    }
-	    else if(this.token.token_type == 'LATEXCOMMAND') {
-	      let r = this.token.token_text.slice(1);
-	      if(this.allowedLatexSymbols.includes(r))
-		var2s.push(r);
-	      else {
-		derivative_possible = false;
-		break;
-	      }
-	    }
-	    else {
-	      derivative_possible = false;
-	      break;
-	    }
-	    // have derivative and variable, now check for optional ^ followed by number
-	    
-	    let this_exponent = 1;
-	    
-	    this.advance();
-	    token_list.push(this.token.original_text_with_space);
-	    
-	    if(this.token.token_type === '^') {
-	      
-	      this.advance();
-	      token_list.push(this.token.original_text_with_space);
-	      
-	      let in_braces = false;
-	      if(this.token.token_type === '{') {
-		in_braces = true;
-		
-		this.advance();
-		token_list.push(this.token.original_text_with_space);
-	      }
-	    
-	      if(this.token.token_type != 'NUMBER') {
-		derivative_possible = false;
-		break;
-	      }
-	      
-	      this_exponent = parseFloat(this.token.token_text);
-	      if(!Number.isInteger(this_exponent)) {
-		derivative_possible = false;
-		break;
-	      }
-	      
-	      // if in braces, require }
-	      if(in_braces) {
-		this.advance();
-		token_list.push(this.token.original_text_with_space);
-
-		if(this.token.token_type != '}') {
-		  derivative_possible = false;
-		  break;
-		}
-	      }
-	      
-	      this.advance();
-	      token_list.push(this.token.original_text_with_space);
-	      
-	    }
-
-	    var2_exponents.push(this_exponent);
-	    exponent_sum += this_exponent;
-	    
-	    if(exponent_sum > n_deriv) {
-	      derivative_possible= false;
-	      break;
-	    }
-
-	    // possibly found derivative
-	    if(exponent_sum == n_deriv) {
-
-	      // next token must be a }
-	      if(this.token.token_type !== '}') {
-		derivative_possible = false;
-		break;
-	      }
-	      
-	      // found derivative!
-
-	      this.advance();
-
-	      let result_name = "derivative_leibniz"
-	      if(deriv_symbol == "∂")
-		result_name = "partial_" + result_name;
-	      
-	      result = [result_name];
-	      
-	      if(n_deriv == 1)
-		result.push(var1);
-	      else
-		result.push(["tuple", var1, n_deriv]);
-
-	      let r2 = []
-	      for(let i=0; i<var2s.length; i+=1) {
-		if(var2_exponents[i] == 1)
-		  r2.push(var2s[i])
-		else
-		  r2.push(["tuple", var2s[i], var2_exponents[i]]);
-	      }
-	      r2 = ["tuple"].concat(r2);
-	      
-	      result.push(r2);
-	      
-	      return result;
-	      
-	    }
-	  }
-	}
-
-	// failed to get derivative, push back extra tokens on lexer
-	for(let token of token_list.reverse()) {
-	  this.lexer.unput(token);
-	}
-	this.advance();
-	
-      } // end of checking if Leibniz derivative
+      }
 	
       var numerator = this.statement({ parse_absolute_value: parse_absolute_value });
 
@@ -1339,6 +1100,237 @@ class latexToAst {
     return result;
   }
 
+  
+  leibniz_notation() {
+    // attempt to find and return a derivative in Leibniz notation
+    // if unsuccessful, return false
+
+    var result = this.token.token_text;
+
+    let deriv_symbol = "";
+	
+    let n_deriv = 1;
+	
+    let var1 = "";
+    let var2s = [];
+    let var2_exponents = [];
+    
+    if(this.token.token_type == "LATEXCOMMAND" && result.slice(1) == "partial")
+      deriv_symbol = "∂";
+    else if(this.token.token_type == "VAR" && result=="d")
+      deriv_symbol = "d";
+    else
+      return false;
+
+    // since have just a d or ∂
+    // one option is that have a ^ followed by an integer next possibly in {}
+    
+    this.advance();
+
+    if(this.token.token_type === '^') {
+      // so far have d or ∂ followed by ^
+      // must be followed by an integer
+      this.advance();
+
+      let in_braces = false;
+      if(this.token.token_type === '{') {
+	in_braces = true;
+	
+	this.advance();
+      }
+      
+      if(this.token.token_type != 'NUMBER') {
+	return false;
+      }
+
+      n_deriv = parseFloat(this.token.token_text);
+      if(!Number.isInteger(n_deriv)) {
+	return false;
+      }
+
+      // found integer,
+
+      // if in braces, require }
+      if(in_braces) {
+	this.advance();
+	
+	if(this.token.token_type != '}') {
+	  return false;
+	}
+      }
+    
+      this.advance();
+    }
+
+    
+    // since have a d or ∂, optionally followed by ^ and integer
+    // next we must have:
+    // a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
+    
+    if(this.token.token_type == 'VAR')
+      var1 = this.token.token_text;
+    else if(this.token.token_type == 'VARMULTICHAR') {
+      // strip out name of variable from \var command
+      var1 = /\\var\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token.token_text)[1];
+    }
+    else if(this.token.token_type == 'LATEXCOMMAND') {
+      result = this.token.token_text.slice(1);
+      if(this.allowedLatexSymbols.includes(result))
+	var1 = result;
+      else
+	return false;
+    }
+
+    // Finished numerator.
+    // Next need a } and {
+
+    this.advance();
+    
+    if (this.token.token_type != '}') {
+      return false;
+    }
+
+    this.advance();
+    
+    if (this.token.token_type != '{') {
+      return false;
+    }
+    else {
+      this.advance();
+
+    }
+
+    // In denominator now
+    // find sequence of
+    // derivative symbol followed by
+    // - a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
+    // optionally followed by a ^ and an integer
+    // End when sum of exponents meets or exceeds n_deriv
+    
+    let exponent_sum = 0;
+
+    while(true) {
+      
+      // next must be
+      // - a VAR equal to deriv_symbol="d" or \partial when deriv_symbol = "∂"
+
+
+      if(!((deriv_symbol == "d" && this.token.token_type == "VAR" && this.token.token_text=="d")
+	   || (deriv_symbol == "∂" && this.token.token_type == "LATEXCOMMAND"
+	       && this.token.token_text.slice(1) == "partial"))) {
+	return false;
+      }
+      
+      // followed by
+      // - a VAR, a VARMULTICHAR, or a LATEXCOMMAND that is in allowedLatexSymbols
+      
+      this.advance();
+
+      if(this.token.token_type == 'VAR')
+	var2s.push(this.token.token_text);
+      else if(this.token.token_type == 'VARMULTICHAR') {
+	// strip out name of variable from \var command
+	var2s.push(/\\var\s*\{\s*([a-zA-Z0-9]+)\s*\}/.exec(this.token.token_text)[1]);
+      }
+      else if(this.token.token_type == 'LATEXCOMMAND') {
+	let r = this.token.token_text.slice(1);
+	if(this.allowedLatexSymbols.includes(r))
+	  var2s.push(r);
+	else {
+	  return false;
+	}
+      }
+      else {
+	return false;
+      }
+      // have derivative and variable, now check for optional ^ followed by number
+      
+      let this_exponent = 1;
+      
+      this.advance();
+      
+      if(this.token.token_type === '^') {
+	
+	this.advance();
+	
+	let in_braces = false;
+	if(this.token.token_type === '{') {
+	  in_braces = true;
+	  
+	  this.advance();
+	}
+	
+	if(this.token.token_type != 'NUMBER') {
+	  return false;
+	}
+	
+	this_exponent = parseFloat(this.token.token_text);
+	if(!Number.isInteger(this_exponent)) {
+	  return false;
+	}
+	
+	// if in braces, require }
+	if(in_braces) {
+	  this.advance();
+
+	  if(this.token.token_type != '}') {
+	    return false;
+	  }
+	}
+	
+	this.advance();
+	
+      }
+
+      var2_exponents.push(this_exponent);
+      exponent_sum += this_exponent;
+	    
+      if(exponent_sum > n_deriv) {
+	return false;
+      }
+
+      // possibly found derivative
+      if(exponent_sum == n_deriv) {
+
+	// next token must be a }
+	if(this.token.token_type !== '}') {
+	  return false;
+
+	}
+	
+	// found derivative!
+
+	this.advance();
+
+	let result_name = "derivative_leibniz"
+	if(deriv_symbol == "∂")
+	  result_name = "partial_" + result_name;
+	
+	result = [result_name];
+	
+	if(n_deriv == 1)
+	  result.push(var1);
+	else
+	  result.push(["tuple", var1, n_deriv]);
+
+	let r2 = []
+	for(let i=0; i<var2s.length; i+=1) {
+	  if(var2_exponents[i] == 1)
+	    r2.push(var2s[i])
+	  else
+	    r2.push(["tuple", var2s[i], var2_exponents[i]]);
+	}
+	r2 = ["tuple"].concat(r2);
+	
+	result.push(r2);
+	
+	return result;
+	
+      }
+    }
+
+    return false;
+  }
 }
 
 export default latexToAst;

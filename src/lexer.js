@@ -55,7 +55,6 @@ class lexer {
     // to end of match.
     // Return token, which is an array of token type and matched string
 
-    let initial_space = "";
 
     let result = this.initial_whitespace.exec(this.input);
     if(result) {
@@ -70,14 +69,10 @@ class lexer {
 	  token_type: "SPACE",
 	  token_text: result[0],
 	  original_text: result[0],
-	  original_text_with_space: result[0],
-	  
 	}
       }
 
       // otherwise ignore initial space and continue
-      // except will prepend to original_text_with_space
-      initial_space = result[0];
     }
       
     // check for EOF
@@ -86,7 +81,6 @@ class lexer {
 	token_type: "EOF",
 	token_text: "",
 	original_text: "",
-	original_text_with_space: initial_space,
       }
     }
     
@@ -110,7 +104,6 @@ class lexer {
 	token_type: "INVALID",
 	token_text: this.input[0],
 	original_text: this.input[0],
-	original_text_with_space: initial_space + this.input[0],
       }
     }
 
@@ -120,14 +113,12 @@ class lexer {
       return { token_type: rule[1],
 	       token_text: rule[2],
 	       original_text: result[0],
-	       original_text_with_space: initial_space + result[0],
 	     };
     }
     else {
       return { token_type: rule[1],
 	       token_text: result[0],
 	       original_text: result[0],
-	       original_text_with_space: initial_space + result[0],
 	     };
     }
   }
